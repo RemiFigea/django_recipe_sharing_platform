@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_add_friend.css' %}" />
+{% endblock %}
+{% block title %}Amis{% endblock %}
+
+{% block bodyId %}addFriendPage{% endblock %}
+
+{% block content %}
+<div class="section-title">
+    <h1> Mes {{ friends.count }} amis </h1>
+</div>
+<div class="section-friend">
+    <ul id="friend-list">
+        {% for friend in friends.all %}
+            <li class="dropdown">
+                <a class="friends">{{ friend.username }}</a>
+                <div class="dropdown-menu">
+                    <a href="/show-recipe-collection?collection_model=RecipeAlbumEntry&member_id={{ friend.id }}">Album de recettes</a>
+                    <a href="/show-recipe-collection?collection_model=RecipeHistoryEntry&member_id={{ friend.id }}">Historique de recettes</a>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+<div class="section-form">
+    <ul id="error-message">
+        {% if messages %}
+            <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+        {% endif %}
+        {% if form.errors %}
+            {% for _, field_errors in form.errors.items %}
+                {% for error in field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
+    </ul>
+    <form id="form-add-friend" action="/add-friend" method="get">
+        {{ form.as_p }}
+        <input type='submit' value="demander en ami"/>
+    </form>
+    <a href="login">Retour vers la page d'accueil</a>
+    </div>
+</div>
+{% endblock %}

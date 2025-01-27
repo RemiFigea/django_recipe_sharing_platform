@@ -1,0 +1,54 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
+        {% block head %}{% endblock %}
+        <title>
+            My Recipe Journal - {% block title %}Bienvenue{% endblock %}
+        </title>
+    </head>
+    <body id="{% block bodyId %}genericPage{% endblock %}">
+        <header>
+            {% block headerContent %}
+            <h1>My Recipe Journal</h1>
+            <ul id="header-link-list">
+                <li>
+                    <a class="header-link not-implemented">Chercher une recette</a>
+                </li>
+                <li>
+                    {% if not logged_user %}
+                    <a class="header-link" href="login">Me connecter</a>
+                    {% else %}
+                    <div class="dropdown">
+                        <a class="header-link" id="login" href="welcome">{{ logged_user.username }}</a>
+                        <div class="dropdown-menu">
+                            <a href="/show-recipe-collection?collection_model=RecipeHistoryEntry&member_id={{ logged_user.id }}">Mon historique de recettes</a>
+                            <a class="not-implemented">Modifier mon profil</a>
+                            <a href="logout">Me déconnecter</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </li>
+                <li><a class="header-link" href="add-recipe">Editer une recette</a></li>
+                <li><a class="header-link" href="/show-recipe-collection?collection_model=RecipeAlbumEntry&member_id={{ logged_user.id }}">Mon album de recettes</a></li>
+                <li><a class="header-link" href="/show-recipe-collection?collection_model=RecipeToTryEntry&member_id={{ logged_user.id }}">Mes recettes à essayer</a></li>
+                <li><a class="header-link" href="/add-friend">Mes amis</a></li>
+            </ul>         
+  
+            {% endblock %}
+        </header>
+        <main>
+            <div id="custom-popup" class="popup hidden">
+                <div class="popup-content">
+                    <p id="popup-message">Message par défaut</p>
+                    <button id="popup-close">OK</button>
+                </div>
+            </div>
+            {% block content %}{% endblock %}
+            <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
+        </main>
+    </body>
+ </html>

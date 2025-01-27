@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_show_recipe_collection.css' %}" />
+{% endblock %}
+
+{% block title %}Collection de recettes{% endblock %}
+
+{% block bodyId %}showRecipeCollectionGenericPage{% endblock %}
+
+{% block content %}
+<div class="section-title">
+    <h1>{{ collection_model.collection_title }} de {{ member.username }}</h1>
+</div>
+<section class="thumbnail-recipes">
+{% for entry in recipe_entries %}
+    <div class="recipe-content">
+        <div class="img-placeholder">
+        <img class="recipe-img" src="{{ MEDIA_URL }}{{ entry.recipe.image }}" alt="{{ entry.recipe.title }}">
+        </div>
+        <script>console.log("{{ MEDIA_URL }}{{ entry.recipe.image }}")</script>
+        {% if  collection_model_name == "RecipeAlbumEntry" or collection_model_name == "RecipeToTryEntry" %}
+        <div class="recipe-description">
+            <h3><a id="title" href="show-recipe?recipeId={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
+            <div class="recipe-metrix">
+                <dl>
+                    <dt>Préparation</dt>
+                    <dt>Cuisson</dt>
+                    <dt>Repos</dt>
+                    <dd> {{ entry.recipe.cooking_preparation }} min</dd>
+                    <dd> {{ entry.recipe.cooking_time }} min</dd>
+                    <dd> {{ entry.recipe.resting_time }} min</dd>
+                </dl>
+            </div>
+        </div>
+
+        {% elif collection_model_name == "RecipeHistoryEntry" %}
+        <div class="recipe-description-history">
+            <h3><a id="title" href="show-recipe?recipeId={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
+            <div class="recipe-metrix">
+                <p> {{ entry.saving_date }} </p>
+            </div>
+        {% endif %}
+        </div>
+    </div>
+{% endfor %}
+</section>
+{% endblock %}

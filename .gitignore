@@ -1,0 +1,14 @@
+*.pyc
+*/__pycache__/
+__pycache__/
+*/.venv/
+.venv/
+
+# Ignore Django migration files
+*/migrations/
+
+# Ignore database files, media folder
+*/*.sqlite3
+*.sqlite3
+*/media/
+media/

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_add_recipe.css' %}" />
+{% endblock %}
+{% block title %}Ajout d'une recette{% endblock %}
+
+{% block bodyId %}addRecipePage{% endblock %}
+
+{% block content %}
+<div class="section-title">
+    <h1>Ajout d'une recette</h1>
+</div>
+
+<div class="section-content">
+    <form action="add-recipe" method="POST" id="add-recipe" enctype="multipart/form-data">
+        {% csrf_token %}
+        <h2>Informations principales</h2>
+        <div class="form-subsection">
+            <div class="form">{{ recipe_form.main_form.as_p }}</div>
+            <div id="section-ingredient">
+                {% for recipe_ingredient_form in recipe_ingredient_form_list %}
+                <div class="ingredient-form">
+                    {{ recipe_ingredient_form.as_p}}
+                    <p><button type="button" id="remove-ingredient-button">supprimer</button></p>
+                </div>
+                {% endfor %}
+                <!-- Ingrédients ajoutés dynamiquement ici -->
+            </div>
+            <p><button type="button" id="add-ingredient-button">Ajouter un nouvel ingrédient</button></p>
+        </div>
+        <h2>Informations additionnelles</h2>
+        <div class="form-subsection">
+            <div class="form">{{ recipe_form.secondary_form.as_p }}</div>
+            <div id="action-form">{{recipe_action_form.as_p }}</div>
+            <p class="submit-section">
+                <input type="submit" value="Enregistrer la recette"/>
+                <a href="welcome">Retour vers la page d'accueil</a>
+            </p>
+        </div>
+    </form>
+</div>
+<script type="text/javascript" src="{% static 'js/script_add_recipe.js' %}"></script>
+{% endblock %}

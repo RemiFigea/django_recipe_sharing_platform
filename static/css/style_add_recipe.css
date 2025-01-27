@@ -1,0 +1,135 @@
+.section-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 80%;
+    border-bottom: var(--couleur-secondaire) solid 2px;
+}
+
+h2 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px; 
+}
+
+form#add-recipe {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%
+}
+
+.form-subsection {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    width:80%;
+    box-sizing: border-box;
+}
+
+.form {
+    width: 100%
+}
+.form p {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width:100%;
+}
+
+.form label{
+    text-align: right;
+    width: 20%;
+    margin-bottom: 5px;
+}
+
+input[type="text"], input[type="url"] {
+    width: 300px;
+}
+input[type="number"] {
+    width: 50px;
+}
+
+textarea {
+    width: 80%;
+    height: 150px;
+    box-sizing: border-box;
+}
+
+#section-ingredient {
+    display: flex;
+    flex-direction: column;
+    width:100%;
+}
+
+.ingredient-form {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+
+.ingredient-form p {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;   
+}
+
+input#id_unit {
+    width: 100px; 
+}
+
+#remove-ingredient-button {
+    justify-self: flex-end;
+}
+
+#action-form p {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .custom-checkbox {
+    order: 1;
+  }
+  
+  #action-form label {
+    order: 2;
+  }
+
+
+.submit-section {
+    align-self: center;
+    margin-top: 20px;
+}
+
+form input[type="submit"] {
+    margin-right: 20px;
+}
+
+button {
+    border-width: 1px;
+    border-color: var(--couleur-texte-principale);
+    padding: 5px 20px;
+    background-color: var(--couleur-tertiaire);
+    color: var(--couleur-texte-principale);
+    font-size: 12px;  
+    font-weight: bold;
+    cursor: pointer;        
+    transition: all 0.1s ease;
+}
+
+
+button:hover {
+    transform: scale(1.05);
+}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load static %}
+{% block head %}<link rel="stylesheet" type="text/css" href="{% static 'css/style_login.css' %}" />{% endblock %}
+
+{% block title %}Connexion{% endblock %}
+
+{% block bodyId %}loginPage{% endblock %}
+
+{% block content %}
+<h1>Me connecter</h1>
+<form action="login" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <p class="submit-section">
+        <input type="submit" value="Me connecter" />
+        <a href="register">Créer un compte</a>
+    </p>
+
+</form>
+{% endblock %}

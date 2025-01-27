@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block head %}<link rel="stylesheet" type="text/css" href="{% static 'css/style_confirmation_page.css' %}" />{% endblock %}
+
+{% block title %}Confirmation{% endblock %}
+
+{% block bodyId %}confirmationPage{% endblock %}
+
+{% block content %}
+<div class="confirmation-box">
+
+{% if messages %}
+    <ul>
+        {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+    <a href="/welcome" class="continue-button">Continuer</a>
+</div>
+{% endblock %}

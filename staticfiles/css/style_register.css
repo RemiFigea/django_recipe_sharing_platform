@@ -1,0 +1,45 @@
+body#loginPage main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+main h1 {
+    height:120px;
+    line-height: 120px;
+    color: var(--couleur-texte-primaire);
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    color: var(--couleur-texte-primaire);
+}
+
+form p {
+    margin: 10px;
+}
+
+form label {
+    display: inline-block;
+    text-align: right;
+    padding-right: 10px;
+    box-sizing: border-box;
+}
+
+form input {
+    display: inline-block;
+    width: 200px;
+}
+
+
+form input[type="submit"] {
+    margin-right: 20px;
+}
+
+.submit-section {
+    margin-top: 20px;
+}

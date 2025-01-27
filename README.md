@@ -2,33 +2,40 @@
 
 This project is a recipe-sharing platform built with Django. It allows users to share their favorite recipes, interact with other members, and organize recipes in personal collections such as albums, histories, and "to try" lists. Members can also rate, comment on, and tag recipes, as well as manage friend connections.
 
+## Access to the deployed app
+
+You can access the live version of the app at:  
+[https://rfigea.pythonanywhere.com/](https://rfigea.pythonanywhere.com/)  
+Note: The app is currently in beta, so some features may be under development.
+
+
 ## Models
 The application includes several models that structure the data:
 
-- Member: Represents a user of the platform, including authentication and friendships.
-- Recipe: Stores recipe details such as title, category, ingredients, and cooking times.
-- RecipeIngredient: Represents the ingredients used in a recipe, including quantity and units.
-- Ingredient: Represents basic ingredients (like flour or sugar) available for use in recipes.
-- BaseRecipeCollectionEntry: Abstract class for entries in different recipe collections (e.g., albums, histories).
-- RecipeAlbumEntry: Stores a recipe entry in a member's personal album.
-- RecipeToTryEntry: Stores a recipe entry in a member's "to-try" list.
-- RecipeHistoryEntry: Keeps track of recipes that a member has tried in the past.
-- Comment: Represents comments made by members on a recipe.
-- Rating: Allows members to rate recipes from 0 to 5 stars.
-- Tag: Categorizes recipes with tags (e.g., vegetarian, quick).
+- **Member**: Represents a user of the platform, including authentication and friendships.
+- **Recipe**: Stores recipe details such as title, category, ingredients, and cooking times.
+- **RecipeIngredient**: Represents the ingredients used in a recipe, including quantity and units.
+- **Ingredient**: Represents basic ingredients (like flour or sugar) available for use in recipes.
+- **BaseRecipeCollectionEntry**: Abstract class for entries in different recipe collections (e.g., albums, histories).
+- **RecipeAlbumEntry**: Stores a recipe entry in a member's personal album.
+- **RecipeToTryEntry**: Stores a recipe entry in a member's "to-try" list.
+- **RecipeHistoryEntry**: Keeps track of recipes that a member has tried in the past.
+- **Comment**: Represents comments made by members on a recipe.
+- **Rating**: Allows members to rate recipes from 0 to 5 stars.
+- **Tag**: Categorizes recipes with tags (e.g., vegetarian, quick).
 
 ## Views
 The views module manages the different actions and pages available to users:
 
-- login: Handles user login and session creation.
-- logout: Logs out a user and ends their session.
-- register: Manages user registration and redirects to the login page upon successful registration.
-- welcome: Displays the homepage, featuring popular recipes and logged-in user information.
-- add_recipe: Manages the process of adding new recipes, including form validation and saving data.
-- show_confirmation_page: Shows a confirmation page after a recipe has been successfully added.
-- show_recipe: Displays detailed information about a specific recipe.
-- add_friend: Allows users to add others to their friend list.
-- show_recipe_collection: Displays a member's collection of recipes (album, to-try, or history).
+- **login**: Handles user login and session creation.
+- **logout**: Logs out a user and ends their session.
+- **register**: Manages user registration and redirects to the login page upon successful registration.
+- **welcome**: Displays the homepage, featuring popular recipes and logged-in user information.
+- **add_recipe**: Manages the process of adding new recipes, including form validation and saving data.
+- **show_confirmation_page**: Shows a confirmation page after a recipe has been successfully added.
+- **show_recipe**: Displays detailed information about a specific recipe.
+- **add_friend**: Allows users to add others to their friend list.
+- **show_recipe_collection**: Displays a member's collection of recipes (album, to-try, or history).
 
 This platform provides an engaging and dynamic way for food enthusiasts to connect, share their culinary creations, and discover new recipes.
 

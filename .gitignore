@@ -7,6 +7,9 @@ __pycache__/
 # Ignore Django migration files
 */migrations/
 
+# Ignore les fichiers static créés pour le déploiement
+/staticfiles/
+
 # Ignore database files, media folder
 # */*.sqlite3
 # *.sqlite3

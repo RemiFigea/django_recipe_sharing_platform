@@ -2,11 +2,11 @@
 {% load static %}
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
-<link rel="stylesheet" type="text/css" href="{% static 'css/style_add_friend.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_show_friends.css' %}" />
 {% endblock %}
 {% block title %}Amis{% endblock %}
 
-{% block bodyId %}addFriendPage{% endblock %}
+{% block bodyId %}showFriendPage{% endblock %}
 
 {% block content %}
 <div class="section-title">
@@ -18,8 +18,13 @@
             <li class="dropdown">
                 <a class="friends">{{ friend.username }}</a>
                 <div class="dropdown-menu">
-                    <a href="/show-recipe-collection?collection_model=RecipeAlbumEntry&member_id={{ friend.id }}">Album de recettes</a>
-                    <a href="/show-recipe-collection?collection_model=RecipeHistoryEntry&member_id={{ friend.id }}">Historique de recettes</a>
+                    <a class="dropdown-item" href="/show-recipe-collection?collection_model=RecipeAlbumEntry&member_id={{ friend.id }}">Album de recettes</a>
+                    <a class="dropdown-item" href="/show-recipe-collection?collection_model=RecipeHistoryEntry&member_id={{ friend.id }}">Historique de recettes</a>
+                    <form action="/show-friends" method="post" style="display: inline-block;">
+                        {% csrf_token %}
+                        <input type="hidden" name="username_to_remove" value="{{ friend.username }}">
+                        <button type="submit" class="dropdown-item">Retirer de ma liste d'amis</button>
+                    </form>
                 </div>
             </li>
         {% endfor %}
@@ -28,7 +33,6 @@
 <div class="section-form">
     <ul id="error-message">
         {% if messages %}
-            <ul>
                 {% for message in messages %}
                     <li>{{ message }}</li>
                 {% endfor %}
@@ -41,9 +45,9 @@
             {% endfor %}
         {% endif %}
     </ul>
-    <form id="form-add-friend" action="/add-friend" method="get">
+    <form id="form-add-friend" action="/show-friends" method="get">
         {{ form.as_p }}
-        <input type='submit' value="demander en ami"/>
+        <input type='submit' value="ajouter à ma liste d'amis"/>
     </form>
     <a href="login">Retour vers la page d'accueil</a>
     </div>

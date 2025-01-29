@@ -138,36 +138,28 @@ def show_recipe(request):
     
     return render(request, "welcome.html", {"logged_user": logged_user, })
 
-def add_friend(request):
-    """
-    Adds a friend to the logged-in user's friend list and displays a success message.
-    Redirects to the login page if the user is not logged in.
-    """
+def show_friends(request):
+    """Displays the logged-in user's friend list and handles adding or removing friends."""
     logged_user = ut.get_logged_user(request)
     if not logged_user:
         return redirect("/login")
 
+    form = AddFriendForm(logged_user=logged_user)
+
+    if request.method == "GET" and "username_to_add" in request.GET:
+        form = ut.handle_add_friend_request(request, logged_user)
+
+    elif request.method == "POST" and "username_to_remove" in request.POST:
+        ut.handle_remove_friend_request(request, logged_user)
+
     friends = logged_user.friends.order_by("username")
-
-    if request.method == "GET" and "username" in request.GET:
-        form = AddFriendForm(request.GET, logged_user=logged_user)
-        if form.is_valid():
-            new_friend_username = form.cleaned_data["username"]
-            new_friend = Member.objects.get(username=new_friend_username)
-
-            if ut.add_friend_to_user(logged_user, new_friend):
-                messages.success(request, f"Nous avons ajouté {new_friend_username} à votre liste d'amis !")
-            else:
-                messages.error(request, f"Impossible d'ajouter {new_friend_username} à vos amis.")      
-    else:
-        form = AddFriendForm(logged_user=logged_user)
 
     context = {
         "logged_user": logged_user,
         "friends": friends,
         "form": form,
     }
-    return render(request, "add_friend.html", context)
+    return render(request, "show_friends.html", context)
 
 def show_recipe_collection(request):
     """

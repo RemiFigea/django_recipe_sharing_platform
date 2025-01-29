@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.forms import ValidationError
 from django import forms
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
-from recipe_journal.forms import  AddRecipeIngredientForm, AddRecipeCombinedForm, RecipeActionForm
+from recipe_journal.forms import  AddFriendForm, AddRecipeIngredientForm, AddRecipeCombinedForm, RecipeActionForm
 import random as rd
 import time
 
@@ -254,25 +254,67 @@ def handle_recipe_collections(recipe_action_form, logged_user, recipe, request):
             recipe,
         )
         if added:
-            messages.success(request, success_message)
+            messages.success(request, success_message)    
 
-def add_friend_to_user(logged_user, new_friend):
+def handle_add_friend_request(request, logged_user):
     """
-    Adds a new friend to the logged-in user.
+    Handles the request to add a new friend to the logged-in user's friend list.
 
     Parameters:
-    - logged_user (Member): The logged-in user.
-    - new_friend (Member): The member to add as a friend.
+    - request (HttpRequest): The HTTP request object containing form data and user input.
+    - logged_user (Member): The currently logged-in user who is attempting to add a friend.
 
     Returns:
-    - bool: True if the friend was added successfully, False otherwise.
+    - form (AddFriendForm): The form object with validation status and error messages, if any.
     """
-    try:
-        logged_user.friends.add(new_friend)
-        logged_user.save()
-        return True
-    except Exception as e:
-        return False
+    form = AddFriendForm(request.GET, logged_user=logged_user)
+    
+    if form.is_valid():
+        new_friend_username = form.cleaned_data["username_to_add"]
+        
+        try:
+            new_friend = Member.objects.get(username=new_friend_username)
+            logged_user.friends.add(new_friend)
+            logged_user.save()
+            messages.success(request, f"Nous avons ajouté {new_friend_username} à votre liste d'amis !")
+        
+        except Member.DoesNotExist:
+            messages.error(request, f"Nous n'avons pas trouvé l'utilisateur {new_friend_username}. Veuillez vérifier son nom d'utilisateur.")
+        
+        except Exception as e:
+            messages.error(request, f"Impossible d'ajouter {new_friend_username} à vos amis.")
+    
+    return form
+
+
+def handle_remove_friend_request(request, logged_user):
+    """
+    Handles the request to remove a friend from the logged-in user's friend list.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request object containing the form data and user input.
+    - logged_user (Member): The currently logged-in user who is attempting to remove a friend.
+
+    Returns:
+    - None
+    """
+    friend_username = request.POST.get("username_to_remove")
+    
+    if friend_username:
+        friend = logged_user.friends.filter(username=friend_username).first()
+        
+        if friend:
+            try:
+                logged_user.friends.remove(friend)
+                logged_user.save()
+                messages.success(request, f"L'utilisateur {friend_username} a été retiré de votre liste d'amis.")
+
+            except Exception as e:
+                messages.error(request, f"Une erreur s'est produite lors de la suppression de {friend_username}.")
+        else:
+            messages.error(request, f"L'utilisateur {friend_username} ne fait pas partie de votre liste d'amis.")
+    else:
+        messages.error(request, "Aucun utilisateur à supprimer.")
     
 def get_recipe_entries_for_member(collection_model, member):
     """

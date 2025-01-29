@@ -146,6 +146,18 @@ h2 a, h3 a {
     white-space: nowrap;
 }
 
+.dropdown-item {
+    display: block;
+    padding: 10px 20px;
+    color: var(--couleur-texte-principale);
+    text-decoration: none;
+    white-space: nowrap;
+    background: none;
+    border: none;
+    font-size: inherit;
+    cursor: pointer;
+}
+
 .dropdown:hover .dropdown-menu {
     display: block;
 }

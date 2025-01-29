@@ -20,13 +20,12 @@ from django.contrib import admin
 from django.urls import path
 from recipe_journal.views.api import add_ingredient_form, add_to_collection, check_collection_status
 from recipe_journal.views.api import check_title, remove_from_collection
-from recipe_journal.views.web import add_friend, add_recipe, login, logout, register, show_recipe
+from recipe_journal.views.web import add_recipe, login, logout, register, show_friends, show_recipe
 from recipe_journal.views.web import show_recipe_collection, show_confirmation_page, welcome
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", welcome),
-    path("add-friend", add_friend),
     path("add-recipe", add_recipe),
     path("api/add-ingredient-form", add_ingredient_form),
     path("api/add-to-collection", add_to_collection),
@@ -37,6 +36,7 @@ urlpatterns = [
     path("logout", logout),
     path("register", register),
     path("show-confirmation-page", show_confirmation_page),
+    path("show-friends", show_friends),
     path("show-recipe", show_recipe),
     path("show-recipe-collection", show_recipe_collection),
     path("welcome", welcome),

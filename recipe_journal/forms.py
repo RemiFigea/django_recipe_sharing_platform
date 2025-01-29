@@ -235,7 +235,7 @@ class AddFriendForm(forms.Form):
     Form for adding a friend to the logged-in user's friend list.
     Verifies that the user exists and is not already in the friend list.
     """
-    username = forms.CharField(
+    username_to_add = forms.CharField(
         label="Identifiant",
         required=True,
         widget=forms.TextInput(attrs={"placeholder": "identifiant de l'ami à ajouter"})
@@ -250,15 +250,15 @@ class AddFriendForm(forms.Form):
         Validates that the username exists and is not already a friend of the logged-in user.
         """
         cleaned_data = super().clean()
-        username = cleaned_data.get("username")
+        username_to_add = cleaned_data.get("username_to_add")
 
         try:
-            friend = Member.objects.get(username=username)
+            friend = Member.objects.get(username=username_to_add)
         except Member.DoesNotExist:
-            raise forms.ValidationError(f"Aucun utilisateur trouvé avec l'identifiant '{username}'.")
+            raise forms.ValidationError(f"Aucun utilisateur trouvé avec l'identifiant '{username_to_add}'.")
 
         if self.logged_user and self.logged_user.friends.filter(id=friend.id).exists():
-            raise forms.ValidationError(f"'{username}' fait déjà partie de vos amis.")
+            raise forms.ValidationError(f"'{username_to_add}' fait déjà partie de vos amis.")
 
         return cleaned_data
 

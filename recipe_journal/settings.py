@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ft92l32mq@n*7yf6ya3!*1!y=i$=ayzn$1qp*t0z62druv@$an
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["rfigea.pythonanywhere.com"]
+ALLOWED_HOSTS = ["rfigea.pythonanywhere.com", "127.0.0.1"]
 
 
 # Application definition

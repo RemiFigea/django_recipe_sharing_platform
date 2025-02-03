@@ -55,9 +55,8 @@ def add_ingredient_form(request):
     if request.method == "GET":
         new_form = AddRecipeIngredientForm()
         form_html = render_to_string("partials/ingredient_form.html", {"form": new_form}, request=request)
-        return HttpResponse(form_html)
-    else:
-        return HttpResponse("Méthode non autorisée", status=405)
+        return JsonResponse({"form_html": form_html})
+    return JsonResponse({"error": "Méthode non autorisée"}, status=405)
 
 def check_collection_status(request):
     """

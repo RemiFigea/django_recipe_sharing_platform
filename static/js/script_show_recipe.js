@@ -1,29 +1,3 @@
-async function fetchData(url, method = "GET", body = null) {
-    try {
-        const options = {
-            method,
-            headers: {
-                "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value,
-            },
-        };
-        if (body) {
-            options.body = body;
-        }
-
-        const response = await fetch(url, options);
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error("Erreur du serveur :", data.message || "Erreur inconnue.");
-            throw new Error(data.message || "Erreur inconnue.");
-        }
-
-        return data;
-    } catch (error) {
-        console.error("Erreur lors de la requête :", error);
-    }
-}
-
 async function updateCollectionButton(dropdown, recipeId) {
     const modelName = dropdown.getAttribute("model-name")
     const collectionButton = dropdown.querySelector(".collection-button");

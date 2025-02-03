@@ -1,4 +1,4 @@
-function checkTitle() {
+async function checkTitle() {
     const titleInputField = document.getElementById("id_title");
     const title = titleInputField?.value;
     const parentContainer = titleInputField?.parentElement;
@@ -6,23 +6,18 @@ function checkTitle() {
     if (!titleInputField) {
         console.error("Éléments #id_title manquants.");
         return;
-    }
+    };
 
-    fetch(`/api/check-title?title=${encodeURIComponent(title)}`)
-    .then((response) => {
-        if (!response.ok) {
-            return response.json().then((errorData) => {
-                console.error("Erreur du serveur :", errorData.message || "Erreur inconnue.");
-                throw new Error(errorData.message || "Erreur inconnue.");
-            });
-        }
-        return response.json();
-    })
-    .then((data) => {
+    try {
+        const data = await fetchData(`/api/check-title?title=${encodeURIComponent(title)}`);
+
+        if (!data) return;
+
         const existingErrorList = parentContainer.previousElementSibling;
-            if (existingErrorList && existingErrorList.classList.contains("errorlist")) {
-                existingErrorList.remove();
-            }
+
+        if (existingErrorList && existingErrorList.classList.contains("errorlist")) {
+            existingErrorList.remove();
+        };
         if (data.error_list && data.error_list.length > 0) {
             const errorListHtml = document.createElement("ul");
             errorListHtml.classList.add("errorlist");
@@ -32,10 +27,11 @@ function checkTitle() {
                 errorListHtml.appendChild(errorItem);
             });
             parentContainer.insertAdjacentElement("beforebegin", errorListHtml);
-        }
-    })
-    .catch((error) => console.error("Erreur lors de l'insertion des messages d'erreur:", error));
-}
+        };
+    } catch (error) {
+        console.error("Erreur lors de l'insertion des messages d'erreur:", error);
+    };
+};
 
 function hideLabelsExceptFirst() {
     const ingredientForms = document.querySelectorAll(".ingredient-form");
@@ -57,18 +53,11 @@ function hideLabelsExceptFirst() {
     return ingredientForms.length;
 }
 
-function addIngredientForm() {
-    fetch(`/api/add-ingredient-form`)
-    .then((response) => {
-        if (!response.ok) {
-            return response.text().then((errorData) => {
-                console.error("Erreur du serveur :", errorData || "Erreur inconnue.");
-                throw new Error(errorData || "Erreur inconnue.");
-            });
-        }
-        return response.text();
-    })
-    .then((html) => {
+async function addIngredientForm() {
+    try {
+        const data = await fetchData(`/api/add-ingredient-form`);
+        if (!data || !data.form_html) return;
+
         const sectionIngredient = document.getElementById("section-ingredient");
         if (!sectionIngredient) {
             console.error("L'élément #section-ingredient est introuvable dans le DOM.");
@@ -76,18 +65,16 @@ function addIngredientForm() {
         }
 
         const template = document.createElement("template");
-        template.innerHTML = html.trim();
-
+        template.innerHTML = data.form_html.trim();
         const newForm = template.content.firstChild;
 
         sectionIngredient.appendChild(newForm);
 
         hideLabelsExceptFirst();
-    })
-    .catch((error) => {
+    } catch (error) {
         console.error("Erreur lors de l'ajout d'un formulaire d'ingrédient :", error);
-    });
-}
+    };
+};
 
 function removeIngredientForm(event) {
     if (event.target.classList.contains("btn-secondary")) {

@@ -1,14 +1,14 @@
-function showPopup(message) {
-    const popup = document.getElementById("custom-popup");
-    const popupMessage = document.getElementById("popup-message");
+function showMessage(message) {
+    const messageBox = document.getElementById("modal-notification");
+    const messageContent = document.getElementById("notification-message");
 
-    popupMessage.textContent = message;
-    popup.classList.remove("hidden");
+    messageContent.textContent = message;
+    messageBox.classList.add("show");
 };
 
-function closePopup() {
-    const popup = document.getElementById("custom-popup");
-    popup.classList.add("hidden");
+function closeMessage() {
+    const messageBox = document.getElementById("modal-notification");
+    messageBox.classList.remove("show");
 };
 
 
@@ -32,9 +32,11 @@ function hideLoadingImageError() {
 document.addEventListener("DOMContentLoaded", () => {
     const message = "Cette fonctionnalité n'a pas encore été implémentée."
     document.querySelectorAll(".not-implemented").forEach((link) => {
-        link.addEventListener("click", () => showPopup(message));
+        link.addEventListener("click", () => showMessage(message));
     });
-    document.getElementById("popup-close")?.addEventListener("click", closePopup);
+    const messageBox = document.getElementById("modal-notification");
+    const closeButton = messageBox?.querySelector(".btn-close")
+    closeButton?.addEventListener("click", closeMessage);
     hideLoadingImageError();
  });
 

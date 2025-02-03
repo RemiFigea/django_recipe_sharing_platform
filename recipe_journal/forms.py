@@ -12,7 +12,7 @@ Forms included:
     - RecipeActionForm: Manages actions related to adding recipes to different collections.
 """
 from django import forms
-from recipe_journal.models import Ingredient, Member, Rating, Recipe, RecipeIngredient
+from recipe_journal.models import Ingredient, Member, Rating, Recipe, RecipeHistoryEntry, RecipeIngredient
 
 class LoginForm(forms.Form):
     """
@@ -262,6 +262,7 @@ class AddFriendForm(forms.Form):
 
         return cleaned_data
 
+
 class RecipeActionForm(forms.Form):
     """
     Form to manage the actions of adding a recipe to various collections 
@@ -303,3 +304,49 @@ class RecipeActionForm(forms.Form):
             raise forms.ValidationError("Vous devez cocher au moins une option.")
         
         return cleaned_data
+
+
+class AddRecipeHistoryForm(forms.ModelForm):
+    class Meta:
+        model = RecipeHistoryEntry
+        fields = ["member", "recipe", "saving_date", "personal_note"]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        saving_date = cleaned_data.get("saving_date")
+        member = cleaned_data.get("member")
+        recipe = cleaned_data.get("recipe")
+
+        if RecipeHistoryEntry.objects.filter(
+            member=member,
+            recipe=recipe,
+            saving_date=saving_date
+        ).exists():
+            raise forms.ValidationError(f"La recette '{recipe.title}' fait déjà partie de votre historique pour la date du {saving_date}!")
+        
+        return cleaned_data
+
+
+
+class RemoveRecipeHistoryForm(forms.Form):
+    def __init__(self, *args, member=None, recipe=None, **kwargs):
+        
+        super().__init__(*args, **kwargs)
+        
+        if member and recipe:
+            queryset = RecipeHistoryEntry.objects.filter(member=member, recipe=recipe)
+            dates = queryset.values_list("saving_date", flat=True).distinct()
+
+            date_choices = [(date, date.strftime("%Y-%m-%d")) for date in dates]
+
+            self.fields["recipe_history_entry_date"] = forms.DateField(
+                widget=forms.Select(choices=date_choices),
+                label="Choisir une date",
+                required=True
+            )
+        else:
+            self.fields["recipe_history_entry_date"] = forms.DateField(
+                widget=forms.Select(choices=[]),
+                label="Choisir une date",
+                required=True
+            )

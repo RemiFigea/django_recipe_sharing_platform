@@ -1,0 +1,22 @@
+<div id="add-recipe-history-modal" class="modal hidden" >
+    <div class="modal-content">
+        <h3>Ajouter cette recette à mon historique</h3>
+        <form id="add-recipe-history-form">
+            {% csrf_token %}
+            <input type="hidden" name="member" value="{{ logged_user.id }}">
+            <input type="hidden" name="recipe" value="{{ recipe.id }}">
+            <p>
+                <input type="text" id="date-picker" name="saving_date" placeholder="Choisissez une date">
+            </p>
+            <textarea name="personal_note" placeholder="Ajoutez un commentaire"></textarea>
+            <div class="success-message">
+                Recette ajoutée à votre historique avec succès !
+            </div>
+            <div class="error-message"></div>
+            <p>
+            <button type="submit" class="btn btn-validate">Ajouter</button>
+            <button type="button" class="btn btn-close">Quitter</button>
+            </p>
+        </form>
+    </div>
+</div>

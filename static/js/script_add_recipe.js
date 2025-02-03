@@ -90,9 +90,8 @@ function addIngredientForm() {
 }
 
 function removeIngredientForm(event) {
-    const removeButton = event.target.closest('.remove-ingredient-button');
-    if (removeButton) {
-        const ingredientForm = removeButton.closest('.ingredient-form');
+    if (event.target.classList.contains("btn-secondary")) {
+        const ingredientForm = event.target.closest(".ingredient-form");
         if (ingredientForm) {
             ingredientForm.remove();
         }
@@ -101,7 +100,7 @@ function removeIngredientForm(event) {
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("id_title")?.addEventListener("focusout", checkTitle);
-    document.getElementById("add-ingredient-button")?.addEventListener("click", addIngredientForm);
+    document.getElementById("add-ingredient-btn")?.addEventListener("click", addIngredientForm);
     document.getElementById("section-ingredient")?.addEventListener("click", removeIngredientForm);
     hideLabelsExceptFirst();
 });

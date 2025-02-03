@@ -41,12 +41,7 @@
             {% endblock %}
         </header>
         <main>
-            <div id="custom-popup" class="popup hidden">
-                <div class="popup-content">
-                    <p id="popup-message">Message par défaut</p>
-                    <button id="popup-close">OK</button>
-                </div>
-            </div>
+            {% include "partials/notification_modal.html" %}
             {% block content %}{% endblock %}
             <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
         </main>

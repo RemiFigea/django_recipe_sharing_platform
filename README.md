@@ -61,12 +61,12 @@ The repository is structured as follows:
         - wsgi.py                  # WSGI configuration for deployment
     /static
         /css                       # Folder containing stylesheets for the front-end
-            - style_add_friend.css
             - style_add_recipe.css
             - style_base.css
             - style_confirmation_page.css
             - style_login.css
             - style_register.css
+            - style_show_friends.css
             - style_show_recipe_collection.css
             - style_show_recipe.css
             - style_welcome.css
@@ -78,13 +78,16 @@ The repository is structured as follows:
             - script_show_recipe.js
     /templates                    # Folder containing HTML templates for rendering the application pages
         /partials
+            - add_recipe_history_modal.html
             - ingredient_form.html # Template for ingredient form (dynamically inserted into add_recipe.html)
-        - add_friend.html          # Page for adding friends
+            - notification_modal.html
+            - remove_recipe_history_modal.html
         - add_recipe.html          # Page for adding a new recipe
         - base.html                # Base template for common page structure (header, footer)
         - confirmation_page.html   # Confirmation page after adding a recipe
         - login.html               # Login page template
         - register.html            # User registration page template
+        - show_friends.html
         - show_recipe_collection.html # Page for showing a user's recipe collection
         - show_recipe.html         # Page for showing a single recipe
         - welcome.html             # Homepage template

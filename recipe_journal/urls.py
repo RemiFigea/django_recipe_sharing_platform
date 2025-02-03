@@ -18,8 +18,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
-from recipe_journal.views.api import add_ingredient_form, add_to_collection, check_collection_status
-from recipe_journal.views.api import check_title, remove_from_collection
+from recipe_journal.views.api import add_ingredient_form, add_to_collection, add_recipe_history, check_collection_status
+from recipe_journal.views.api import check_title, remove_from_collection,  remove_recipe_history
 from recipe_journal.views.web import add_recipe, login, logout, register, show_friends, show_recipe
 from recipe_journal.views.web import show_recipe_collection, show_confirmation_page, welcome
 
@@ -29,9 +29,11 @@ urlpatterns = [
     path("add-recipe", add_recipe),
     path("api/add-ingredient-form", add_ingredient_form),
     path("api/add-to-collection", add_to_collection),
+    path("api/add-recipe-history", add_recipe_history),
     path("api/check-collection-status", check_collection_status),
     path("api/check-title", check_title),
     path("api/remove-from-collection", remove_from_collection),
+    path("api/remove-recipe-history", remove_recipe_history),
     path("login", login),
     path("logout", logout),
     path("register", register),

@@ -79,24 +79,6 @@ header li:hover {
     transform: scale(1.05);
 }
 
-form input[type="submit"] {
-    border: none;
-    padding: 10px 20px;
-    background-color: var(--couleur-primaire);
-    color: var(--couleur-texte-secondaire);
-    font-size: 16px;  
-    font-weight: bold;
-    border-radius: 25px;
-    cursor: pointer;        
-    transition: all 0.3s ease;
-}
-
-
-form input[type="submit"]:hover {
-    background-color: var(--couleur-accent);
-    transform: scale(1.05);
-}
-
 h2 a, h3 a {
     text-decoration: none;
     color: inherit;
@@ -206,51 +188,77 @@ h2 a, h3 a {
     background-color: var(--couleur-secondaire);
 }
 
+.modal.show {
+    display: flex;
+}
 
+.btn {
+    display: inline-flex; 
+    justify-content: center;
+    align-items: center; 
+    opacity: 1;
+    border: none;
+    min-height: 30px;
+    min-width: 100px;
+    margin: 10px;
+    padding: 10px 20px;
+    border-radius: 25px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFFFFF;
+    transition: all 0.3s ease;
+    background-color: var(--couleur-primaire);
+}
 
-.popup {
+.btn:hover {
+    background-color: var(--couleur-accent);
+    transform: scale(1.05);
+}
+
+.btn-close {
+    background-color: var(--couleur-tertiaire);
+}
+
+.btn-secondary {
+    font-size: 13px;
+    min-height: 15px;
+    min-width: 60px;
+    padding: 5px 10px;
+}
+
+.modal {
+    display: none;
+    align-items: center;
+    justify-content: center;
     position: fixed;
     top: 0;
     left: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
 }
 
+.modal-content {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+width: 80%;
+max-width: 400px;
+position: relative;
+margin: 15% auto;
+padding: 20px;
+border: 1px solid #888;
+border-radius: 8px;
+overflow: hidden;
+background-color: #fff;
+}
 
 .hidden {
     display: none;
-}
-
-
-.popup-content {
-    width: 300px;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.25);
-    text-align: center;
-    background-color: #FFFFFF;
-}
-
-
-#popup-close {
-    opacity: 1;
-    border: none;
-    margin-top: 10px;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    color: #FFFFFF;
-    background-color: var(--couleur-primaire);
-}
-
-#popup-close:hover {
-    background-color: var(--couleur-accent);
 }
 
 @media (max-width: 950px) {

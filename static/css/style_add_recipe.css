@@ -70,7 +70,7 @@ textarea {
 
 .ingredient-form {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
     gap: 10px;
     flex-wrap: wrap;
@@ -89,7 +89,7 @@ input#id_unit {
     width: 100px; 
 }
 
-#remove-ingredient-button {
+#remove-ingredient-btn {
     justify-self: flex-end;
 }
 
@@ -113,23 +113,7 @@ input#id_unit {
     margin-top: 20px;
 }
 
-form input[type="submit"] {
-    margin-right: 20px;
-}
-
-button {
-    border-width: 1px;
-    border-color: var(--couleur-texte-principale);
-    padding: 5px 20px;
-    background-color: var(--couleur-tertiaire);
-    color: var(--couleur-texte-principale);
-    font-size: 12px;  
-    font-weight: bold;
-    cursor: pointer;        
-    transition: all 0.1s ease;
-}
-
-
-button:hover {
-    transform: scale(1.05);
+.ingredient-form .btn {
+    margin: 1px 0px;
+    align-self: flex-end;
 }

@@ -9,7 +9,7 @@ Views included:
     - add_recipe: Handles the process of adding a new recipe, validating forms and saving data.
     - show_confirmation_page: Displays a confirmation page after recipe addition.
     - show_recipe: Displays a detailed view of a specific recipe.
-    - add_friend: Manages adding a friend to the user's friend list.
+    - show_friends: Manages adding a friend to the user's friend list.
     - show_recipe_collection: Displays a member's recipe collection (album, to-try, history).
 """
 

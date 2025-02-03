@@ -12,8 +12,8 @@
     {% csrf_token %}
     {{ form.as_p }}
     <p class="submit-section">
-        <input type="submit" value="Créer" />
-        <a href="login">Retour vers la page d'accueil</a>
+        <input type="submit" class="btn btn-validate" value="Créer" />
+        <a href="/welcome">Retour vers la page d'accueil</a>
     </p>
 </form>
 {% endblock %}

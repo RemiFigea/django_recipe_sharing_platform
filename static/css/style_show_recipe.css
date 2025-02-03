@@ -175,9 +175,6 @@ button {
     cursor: pointer;
 }
 
-
-
-/* Style pour les petits écrans */
 @media (max-width: 750px) {
     #recipe-overview {
         flex-direction: column;
@@ -221,4 +218,11 @@ button {
     #recipe-content .side-bar {
         order: 1;
     }
+}
+
+
+
+#personal-note {
+    width: 80%;
+    height: 100px;
 }

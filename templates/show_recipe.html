@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 {% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_show_recipe.css' %}" />
 {% endblock %}
@@ -10,6 +12,10 @@
 {% block bodyId %}recipePage{% endblock %}
 
 {% block content %}
+<div id="recipe-history-modals">
+{% include "partials/add_recipe_history_modal.html" %}
+{% include "partials/remove_recipe_history_modal.html" %}
+</div>
 <div class="section-title">
     <h1>Titre de la recette: {{ recipe.title }}</h1>
     <p>Lien web: <a href={{ recipe.url_link }}>{{ recipe.url_link }}</a></p>
@@ -74,17 +80,6 @@
         </dl>
     </div>
 </div>
-
-{% comment %}=
-
-<!-- Section des commentaires -->
-<section id="comments">
-    <h2>Commentaires</h2>
-    <div>
-        <p>Commentaire 1...</p>
-        <p>Commentaire 2...</p>
-    </div>
-</section> {% endcomment %}
 <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
 <script type="text/javascript" src="{% static 'js/script_show_recipe.js' %}"></script>
 {% endblock %}

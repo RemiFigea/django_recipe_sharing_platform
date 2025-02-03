@@ -1,0 +1,19 @@
+<div id="remove-recipe-history-modal" class="modal hidden"  >
+    <div class="modal-content">
+        <h3>Retirer cette recette de mon historique</h3>
+        <form id="remove-recipe-history-form" member-id="{{ logged_user.id }}" recipe-id="{{ recipe.id }}">
+            {% csrf_token %}
+            <input type="hidden" name="member_id" value="{{ logged_user.id }}">
+            <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+            <div id="select-date-to-remove"></div>
+            <div class="success-message">
+                Recette retirée de votre historique avec succès !
+            </div>
+            <div class="error-message"></div>
+            <p>
+                <button type="submit" class="btn btn-validate">Retirer</button>
+                <button type="button" class="btn btn-close">Quitter</button>
+            </p>
+        </form>
+    </div>
+</div>

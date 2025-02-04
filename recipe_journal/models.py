@@ -98,6 +98,13 @@ class BaseRecipeCollectionEntry(models.Model):
 
     Stores a member, recipe, saving date, and personal notes.
     """
+    # COLLECTION_TYPES = [
+    #     ("history", "Historique de recettes"),
+    #     ("album", "Album de recettes"),
+    #     ("trials", "Recettes à essayer")
+    # ]
+
+    # collection_type = models.CharField(max_length=20, choices=COLLECTION_TYPES)
     member = models.ForeignKey('Member', on_delete=models.CASCADE)
     recipe = models.ForeignKey('Recipe', on_delete=models.CASCADE)
     saving_date = models.DateField(default=date.today)

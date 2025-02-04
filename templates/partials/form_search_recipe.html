@@ -1,0 +1,64 @@
+<form action="search-recipe" method="get">
+    <div class="form-container">
+        <div class="form-column">
+            <div id="form-title" class="form-group">
+                <label id="label-title">{{ form.title.label }}</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="error-message">{{ form.title.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label>{{ form.category.label }}</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                    <div class="error-message">{{ form.category.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label>{{ form.collection.label }}</label>
+                {{ form.collection }}
+                {% if form.collection.errors %}
+                    <div class="error-message">{{ form.collection.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label>{{ form.member.label }}</label>
+                {{ form.member }}
+                {% if form.member.errors %}
+                    <div class="error-message">{{ form.member.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-column">
+            <div class="form-group">
+                <label>{{ form.ingredient_1.label }}</label>
+                {{ form.ingredient_1 }}
+                {% if form.ingredient_1.errors %}
+                    <div class="error-message">{{ form.ingredient_1.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label>{{ form.ingredient_2.label }}</label>
+                {{ form.ingredient_2 }}
+                {% if form.ingredient_2.errors %}
+                    <div class="error-message">{{ form.ingredient_2.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label>{{ form.ingredient_3.label }}</label>
+                {{ form.ingredient_3 }}
+                {% if form.ingredient_3.errors %}
+                    <div class="error-message">{{ form.ingredient_3.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-column" id="div-submit">
+            <input type="submit" class="btn btn-validate" value="Rechercher" />
+            <a href="welcome">Retour vers la page d'accueil</a>
+        </div>
+    </div>
+</form>

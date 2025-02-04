@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_search_recipe.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_thumbnail_recipes.css' %}" />
+{% endblock %}
+
+{% block title %}echercher une recette{% endblock %}
+
+{% block bodyId %}searchRecipePage{% endblock %}
+
+{% block content %}
+<div class="section-title">
+<h1>Rechercher une recette</h1>
+</div>
+<div class="search-form">
+    {{ form|safe }}
+</div>
+{% include "partials/thumbnail_recipes.html" %}
+<script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
+{% endblock %}

@@ -54,7 +54,7 @@ def add_ingredient_form(request):
     """
     if request.method == "GET":
         new_form = AddRecipeIngredientForm()
-        form_html = render_to_string("partials/ingredient_form.html", {"form": new_form}, request=request)
+        form_html = render_to_string("partials/form_recipe_ingredient.html", {"form": new_form}, request=request)
         return JsonResponse({"form_html": form_html})
     return JsonResponse({"error": "Méthode non autorisée"}, status=405)
 
@@ -199,6 +199,15 @@ def remove_from_collection(request):
         return JsonResponse({"message": "Une erreur est survenue.", "count": 0}, status=500)
 
 def add_recipe_history(request):
+    """
+    Adds a recipe to a user's history.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request containing the recipe data to be saved.
+
+    Returns:
+    - JsonResponse: A response indicating success or failure, with form validation errors if applicable.
+    """
     if request.method == "POST":
         form = AddRecipeHistoryForm(request.POST)
         if form.is_valid():
@@ -209,12 +218,20 @@ def add_recipe_history(request):
     return HttpResponse("Méthode non autorisée", status=405)
 
 def remove_recipe_history(request):
+    """
+    Removes a recipe from a user's history.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request containing the member ID, recipe ID, and history entry date.
+
+    Returns:
+    - JsonResponse: A response indicating success or failure, with updated form HTML if applicable.
+    """
     if not (request.method == "POST"):
         return HttpResponse("Méthode non autorisée", status=405)
 
     member_id = request.POST.get("member_id")
     recipe_id = request.POST.get("recipe_id")
-    print(request.POST)
 
     if not (member_id and recipe_id):
         return HttpResponse("Missing parameters", status=400)
@@ -226,12 +243,6 @@ def remove_recipe_history(request):
     if form.is_valid():
         recipe_history_entry_date = form.cleaned_data["recipe_history_entry_date"]
         try:
-            # if not form.fields["recipe_history_entry_date"].choices:
-            #     # Si les choix sont vides, transmettre un message et ne pas afficher le formulaire
-            #     return JsonResponse({"success": False, "message": "La recette ne fait pas partie de votre historique.", "form_html": ""})
-
-
-
             form_html = form.as_p() 
             count, _ = RecipeHistoryEntry.objects.filter(
                 member=member,
@@ -251,7 +262,6 @@ def remove_recipe_history(request):
 
     form._errors.clear()
     form_html = form.as_p()
-
 
     return JsonResponse({"success": False, "errors":"", "form_html": form_html})
   

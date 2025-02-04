@@ -1,0 +1,55 @@
+.search-form {
+    display: flex;
+    justify-content: center;
+    width: 80%;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: var(--couleur-secondaire) solid 2px;
+}
+.form-container {
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    justify-content: flex-start;
+    margin: 3px 0px;
+    gap:3px;
+}
+
+
+label {
+    width: 80px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+#form-title {
+    margin-left: -40px;
+}
+
+#label-title {
+    width: 120px;
+}
+
+input[type="text"] {
+    width: 100px;
+}
+select {
+    width: 150px;
+}
+
+#id_title {
+    width: 200px;
+}
+
+.form-column .btn {
+    margin-top: 3px;
+    margin-bottom: 0;
+}
+
+

@@ -16,7 +16,7 @@
             <h1>My Recipe Journal</h1>
             <ul id="header-link-list">
                 <li>
-                    <a class="header-link not-implemented">Chercher une recette</a>
+                    <a href="/search-recipe" class="header-link">Chercher une recette</a>
                 </li>
                 <li>
                     {% if not logged_user %}
@@ -41,7 +41,7 @@
             {% endblock %}
         </header>
         <main>
-            {% include "partials/notification_modal.html" %}
+            {% include "partials/modal_notification.html" %}
             {% block content %}{% endblock %}
             <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
         </main>

@@ -11,14 +11,16 @@ Views included:
     - show_recipe: Displays a detailed view of a specific recipe.
     - show_friends: Manages adding a friend to the user's friend list.
     - show_recipe_collection: Displays a member's recipe collection (album, to-try, history).
+    - search_recipe:
 """
 
 from django.conf import settings
 from django.contrib import messages
+from django.template.loader import render_to_string
 from django.shortcuts import redirect, render
 from recipe_journal.forms import LoginForm, AddFriendForm
-from recipe_journal.forms import RegistrationForm
-from recipe_journal.models import Member, Recipe, RecipeHistoryEntry, RecipeAlbumEntry, RecipeToTryEntry
+from recipe_journal.forms import RegistrationForm, SearchRecipeForm
+from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
 import recipe_journal.utils.utils as ut
 from recipe_journal.models import Recipe, RecipeHistoryEntry, RecipeAlbumEntry, RecipeToTryEntry
 
@@ -78,7 +80,7 @@ def welcome(request):
     context = {
         "logged_user": logged_user,
         "top_recipe_list": top_recipe_list,
-        "thumbnail_recipe_list": thumbnail_recipe_list,
+        "thumbnail_recipes": thumbnail_recipe_list,
         "MEDIA_URL": settings.MEDIA_URL,
     }
     return render(request, "welcome.html", context)
@@ -200,6 +202,27 @@ def show_recipe_collection(request):
     }
     return render(request, "show_recipe_collection.html", context)
 
+def search_recipe(request):
+    """Handles recipe search and renders the search page."""
+    logged_user = ut.get_logged_user(request)
+    
+    if not logged_user:
+        return redirect("/login")
+    
+    form = SearchRecipeForm()
+    recipe_entries = Recipe.objects.all()
 
+    if request.method == "GET":
+        form, recipe_entries = ut.handle_search_recipe_request(request, logged_user)
+       
+    form_html = render_to_string("partials/form_search_recipe.html", {"form": form}, request=request)
+
+    context = {
+    "logged_user": logged_user,
+    "thumbnail_recipes": recipe_entries,
+    "form": form_html,
+    "MEDIA_URL": settings.MEDIA_URL,
+    }
+    return render(request, "search_recipe.html", context)
 
 

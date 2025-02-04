@@ -19,7 +19,6 @@
         <div class="img-placeholder">
         <img class="recipe-img" src="{{ MEDIA_URL }}{{ entry.recipe.image }}" alt="{{ entry.recipe.title }}">
         </div>
-        <script>console.log("{{ MEDIA_URL }}{{ entry.recipe.image }}")</script>
         {% if  collection_model_name == "RecipeAlbumEntry" or collection_model_name == "RecipeToTryEntry" %}
         <div class="recipe-description">
             <h3><a id="title" href="show-recipe?recipeId={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>

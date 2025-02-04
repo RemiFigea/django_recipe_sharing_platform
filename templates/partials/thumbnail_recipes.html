@@ -1,0 +1,22 @@
+<section class="thumbnail-recipes">
+    {% for recipe in thumbnail_recipes %}
+        <div class="recipe-content">
+            <div class="img-placeholder">
+                <img class="recipe-img" src="{{ MEDIA_URL }}{{ recipe.image }}" alt="{{ recipe.title }}">
+            </div>
+            <div class="recipe-description">
+                <h3><a id="title" href="show-recipe?recipeId={{ recipe.id }}">{{ recipe.title }}</a></h3>
+                <div class="recipe-metrix">
+                    <dl>
+                        <dt>Préparation</dt>
+                        <dt>Cuisson</dt>
+                        <dt>Repos</dt>
+                        <dd> {{ recipe.cooking_preparation }} min</dd>
+                        <dd> {{ recipe.cooking_time }} min</dd>
+                        <dd> {{ recipe.resting_time }} min</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</section>

@@ -5,8 +5,12 @@ from django.forms import ValidationError
 from django import forms
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
 from recipe_journal.forms import  AddFriendForm, AddRecipeIngredientForm, AddRecipeCombinedForm, RecipeActionForm
+from recipe_journal.forms import SearchRecipeForm
 import random as rd
+import spacy
 import time
+
+nlp = spacy.load("fr_core_news_sm")
 
 def get_logged_user(request):
     """
@@ -41,7 +45,7 @@ def get_daily_random_sample(num_samples):
     rd.seed(daily_timestamp)
     recipe_ids_list = list(Recipe.objects.values_list('id', flat=True))
     
-    if len(recipe_ids_list) >= num_samples:
+    if len(recipe_ids_list) > 0:
         random_ids = rd.sample(recipe_ids_list, min(num_samples, len(recipe_ids_list)))
         return random_ids
     else:
@@ -178,7 +182,6 @@ def are_forms_valid(*forms):
     """
     return all(form.is_valid() for form in forms)
 
-
 def save_recipe_with_ingredients(recipe_form, recipe_ingredient_form_list):
     """
     Saves a recipe and its associated ingredients.
@@ -286,7 +289,6 @@ def handle_add_friend_request(request, logged_user):
     
     return form
 
-
 def handle_remove_friend_request(request, logged_user):
     """
     Handles the request to remove a friend from the logged-in user's friend list.
@@ -334,4 +336,122 @@ def get_recipe_entries_for_member(collection_model, member):
         else:
             return collection_model.objects.filter(member=member).order_by("recipe__title")
     return None
+
+def normalize_ingredient(ingredient_name):
+    """
+    Normalizes an ingredient name by lemmatizing its tokens.
+
+    Parameters:
+    - ingredient_name (str or None): The name of the ingredient to normalize.
+
+    Returns:
+    - str: The normalized ingredient name with lemmatized tokens, or None if input is None.
+    """
+    if ingredient_name != None:
+        doc = nlp(ingredient_name)
+        return " ".join([token.lemma_ for token in doc])
+
+def get_ingredient_inputs(form):
+    """
+    Extracts and normalizes ingredient inputs from a form.
+
+    Parameters:
+    - form (SearchRecipeForm): The form containing ingredient input fields.
+
+    Returns:
+    - dict: A dictionary containing ingredient names, with keys formatted as "ingredient_X".
+    """
+    ingredient_inputs_dict = dict()
+
+    for i in range(1, 4):
+        ingredient_name = form.cleaned_data.get(f"ingredient_{i}")
+        ingredient_inputs_dict[f"ingredient_{i}"] = normalize_ingredient(ingredient_name)
+    return ingredient_inputs_dict
+
+def filter_by_collection(collection):
+    """
+    Retrieves recipe collection objects belonging to a specified collection.
+
+    Parameters:
+    - collection (str): The name of the collection to filter by.
+
+    Returns:
+    - QuerySet: A QuerySet of recipe collection objects belonging to the specified collection, or an empty QuerySet if the collection is not found.
+    """
+    MODEL_MAP = {
+        "RecipeAlbumEntry": RecipeAlbumEntry,
+        "RecipeToTryEntry": RecipeToTryEntry,
+        "RecipeHistoryEntry": RecipeHistoryEntry
+    }
+    collection_model = MODEL_MAP.get(collection)
+
+    if collection_model:
+        recipe_ids = collection_model.objects.values_list("recipe", flat=True).distinct()
+        return collection_model.objects.filter(recipe__in=recipe_ids)
+
+    return RecipeAlbumEntry.objects.none()
+
+
+def filter_by_member(logged_user, member, recipe_collection_qs_list):
+    """
+    Filters recipes by member visibility (e.g., friends only).
+
+    Parameters:
+    - logged_user (Member): The currently logged-in user.
+    - member (str): The visibility setting ("friends" or all members).
+    - recipe_collection_qs_list (list of QuerySet): A list of QuerySets containing recipe collection objects to filter.
+
+    Returns:
+    - QuerySet: A QuerySet containing recipes objected associated to the specified member group.
+    """
+    if member == "friends":
+        friends = logged_user.friends.all()
+        recipe_collection_qs_list = [recipe_collection_qs.filter(member__in=friends) for recipe_collection_qs in recipe_collection_qs_list]
+    recipe_ids_set = set()
+    for recipe_collection_qs in recipe_collection_qs_list:
+        recipe_ids_set.update(recipe_collection_qs.values_list("recipe", flat=True))
+    return Recipe.objects.filter(id__in=recipe_ids_set)
+
+def handle_search_recipe_request(request, logged_user):
+    """
+    Processes a recipe search request based on various filters.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request containing search parameters.
+    - logged_user (Member): The currently logged-in user performing the search.
+
+    Returns:
+    - tuple: A tuple containing:
+        - SearchRecipeForm: The processed form with search criteria applied.
+        - QuerySet: A filtered queryset of recipes matching the search criteria.
+    """
+    form = SearchRecipeForm(request.GET)
+    recipe_entries = Recipe.objects.all()
+
+    if form.is_valid():
+        title = form.cleaned_data.get("title")
+        category = form.cleaned_data.get("category")
+        collection = form.cleaned_data.get("collection")
+        member = form.cleaned_data.get("member")
+        ingredient_inputs_dict = get_ingredient_inputs(form)
+
+        recipe_collection_queryset_list = [filter_by_collection(collection)] if collection else [
+            RecipeAlbumEntry.objects.all(), RecipeHistoryEntry.objects.all()
+        ]
+        recipe_entries = filter_by_member(logged_user, member, recipe_collection_queryset_list)
+
+        filters = {}
+        if title:
+            filters["title__icontains"] = title
+        if category:
+            filters["category"] = category
+
+        recipe_entries = recipe_entries.filter(**filters)
+
+    
+        for ingredient_name in ingredient_inputs_dict.values():
+            if ingredient_name:
+                recipe_entries = recipe_entries.filter(recipe_ingredient__ingredient__name__icontains=ingredient_name)
+        
+    return form, recipe_entries
 

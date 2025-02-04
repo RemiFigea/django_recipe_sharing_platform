@@ -10,6 +10,9 @@ Forms included:
     - AddRecipeIngredientForm: Adds ingredients to a recipe.
     - AddFriendForm: Manages adding friends to the user's friend list.
     - RecipeActionForm: Manages actions related to adding recipes to different collections.
+    - AddRecipeHistoryForm:
+    - RemoveRecipeHistoryForm:
+    - SearchRecipeForm:   - 
 """
 from django import forms
 from recipe_journal.models import Ingredient, Member, Rating, Recipe, RecipeHistoryEntry, RecipeIngredient
@@ -35,7 +38,6 @@ class LoginForm(forms.Form):
                 raise forms.ValidationError("Identifiant ou mot de passe erroné.")
         return cleaned_data
 
-
 class RegistrationForm(forms.ModelForm):
     """
     Form to handle user registration, ensuring the provided username is unique.
@@ -57,7 +59,6 @@ class RegistrationForm(forms.ModelForm):
             if len(result) !=0:
                 raise forms.ValidationError("Identifiant non disponible.")
         return cleaned_data
-
 
 class AddMainRecipeForm(forms.ModelForm):
     """
@@ -101,7 +102,6 @@ class AddMainRecipeForm(forms.ModelForm):
             
         return cleaned_data
 
-
 class AddSecondaryRecipeForm(forms.ModelForm):
     """
     Form to add secondary details of a recipe, such as cooking time, preparation time, 
@@ -130,7 +130,6 @@ class AddSecondaryRecipeForm(forms.ModelForm):
     #     required=False,
     #     widget=forms.Select(),
     # )
-
 
 class AddRecipeCombinedForm(forms.Form):
     """
@@ -185,7 +184,6 @@ class AddRecipeCombinedForm(forms.Form):
         recipe.save()
         return recipe
 
-
 class AddRecipeIngredientForm(forms.ModelForm):
     """
     Form to add ingredients to a recipe. 
@@ -229,7 +227,6 @@ class AddRecipeIngredientForm(forms.ModelForm):
 
         return instance
     
-
 class AddFriendForm(forms.Form):
     """
     Form for adding a friend to the logged-in user's friend list.
@@ -261,7 +258,6 @@ class AddFriendForm(forms.Form):
             raise forms.ValidationError(f"'{username_to_add}' fait déjà partie de vos amis.")
 
         return cleaned_data
-
 
 class RecipeActionForm(forms.Form):
     """
@@ -305,7 +301,6 @@ class RecipeActionForm(forms.Form):
         
         return cleaned_data
 
-
 class AddRecipeHistoryForm(forms.ModelForm):
     class Meta:
         model = RecipeHistoryEntry
@@ -325,8 +320,6 @@ class AddRecipeHistoryForm(forms.ModelForm):
             raise forms.ValidationError(f"La recette '{recipe.title}' fait déjà partie de votre historique pour la date du {saving_date}!")
         
         return cleaned_data
-
-
 
 class RemoveRecipeHistoryForm(forms.Form):
     def __init__(self, *args, member=None, recipe=None, **kwargs):
@@ -350,3 +343,24 @@ class RemoveRecipeHistoryForm(forms.Form):
                 label="Choisir une date",
                 required=True
             )
+
+class SearchRecipeForm(forms.Form):
+    collection_choices = [
+        ("", "toutes"),
+        ("RecipeHistoryEntry", "historique de recettes"),
+        ("RecipeAlbumEntry", "album de recettes")
+    ]
+
+    member_choices = [
+        ("", "tous"),
+        ("friends", "mes amis"),
+    ]
+
+    title = forms.CharField(label="titre de la recette:", required=False)
+    category = forms.ChoiceField(label="type de plat:", choices=[("", "tous")] + Recipe.CATEGORY_CHOICES, required=False)
+    collection = forms.ChoiceField(label="collection:", choices=collection_choices, required=False)
+    member = forms.ChoiceField(label="membres:", choices=member_choices, required=False)
+    ingredient_1 = forms.CharField(label="ingredient 1:", required=False)
+    ingredient_2 = forms.CharField(label="ingredient 2:", required=False)
+    ingredient_3 = forms.CharField(label="ingredient 3:", required=False)
+    

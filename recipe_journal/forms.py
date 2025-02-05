@@ -4,6 +4,7 @@ Module containing the forms for the Django application.
 Forms included:
     - LoginForm: Handles user login.
     - RegistrationForm: Manages user registration.
+    - ModifyProfileForm:
     - AddMainRecipeForm: Captures main recipe information like title and category.
     - AddSecondaryRecipeForm: Captures additional recipe details like cooking time and description.
     - AddRecipeCombinedForm: Combines the main and secondary recipe forms into one submission.
@@ -12,10 +13,12 @@ Forms included:
     - RecipeActionForm: Manages actions related to adding recipes to different collections.
     - AddRecipeHistoryForm:
     - RemoveRecipeHistoryForm:
-    - SearchRecipeForm:   - 
+    - SearchRecipeForm:
+    - FilterRecipeCollectionForm
 """
+from django.contrib.auth.hashers import check_password, make_password
 from django import forms
-from recipe_journal.models import Ingredient, Member, Rating, Recipe, RecipeHistoryEntry, RecipeIngredient
+from recipe_journal.models import Ingredient, Member, Recipe, RecipeHistoryEntry, RecipeIngredient
 
 class LoginForm(forms.Form):
     """
@@ -33,8 +36,12 @@ class LoginForm(forms.Form):
         password = cleaned_data.get("password")
 
         if username and password:
-            result = Member.objects.filter(username=username, password=password)
-            if len(result) !=1:
+            try:
+                user = Member.objects.get(username=username)
+            except Member.DoesNotExist:
+                raise forms.ValidationError("Identifiant ou mot de passe erroné.")
+
+            if not check_password(password, user.password):
                 raise forms.ValidationError("Identifiant ou mot de passe erroné.")
         return cleaned_data
 
@@ -45,6 +52,11 @@ class RegistrationForm(forms.ModelForm):
     class Meta:
         model = Member
         fields = ["username", "password"]
+        labels = {
+            "username": "identifiant",
+            "password": "mot de passe",
+        }
+        widgets = {"password": forms.PasswordInput()}
 
     def clean(self):
         """
@@ -55,10 +67,85 @@ class RegistrationForm(forms.ModelForm):
         password = cleaned_data.get("password")
 
         if username and password:
-            result = Member.objects.filter(username=username)
-            if len(result) !=0:
+            if Member.objects.filter(username=username).exists():
                 raise forms.ValidationError("Identifiant non disponible.")
         return cleaned_data
+    
+    def save(self, commit=True):
+        """
+        """
+        member = super().save(commit=False)
+        password = self.cleaned_data["password"]
+
+        if password:
+            member.password = make_password(password)
+
+        if commit:
+            member.save()
+
+        return member
+    
+class ModifyProfileForm(RegistrationForm):
+    former_password = forms.CharField(
+        label="Ancien mot de passe",
+        widget=forms.PasswordInput(),
+        required=True
+    )
+    new_password = forms.CharField(
+        label="Nouveau mot de passe",
+        widget=forms.PasswordInput(),
+        required=True
+    )
+    confirm_new_password = forms.CharField(
+        label="Confirmez le nouveau mot de passe",
+        widget=forms.PasswordInput(),
+        required=True
+    )
+
+    class Meta(RegistrationForm.Meta):
+        fields = ["username", "former_password", "new_password", "confirm_new_password"]
+        labels = {
+            "username": "Identifiant",
+        }
+
+    def __init__(self, *args, logged_user=None, **kwargs):
+        self.logged_user = logged_user
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super(forms.ModelForm, self).clean()
+        username = cleaned_data.get("username")
+        former_password = cleaned_data.get("former_password")
+        new_password = cleaned_data.get("new_password")
+        confirm_new_password = cleaned_data.get("confirm_new_password")
+
+        if username and username != self.logged_user.username:
+            if Member.objects.filter(username=username).exists():
+                raise forms.ValidationError("Identifiant non disponible.")
+
+        if not check_password(former_password, self.logged_user.password):
+            raise forms.ValidationError("Ancien mot de passe erroné.")
+
+        if new_password != confirm_new_password:
+            raise forms.ValidationError("Les nouveaux mots de passe ne correspondent pas.")
+
+        return cleaned_data
+    
+    def save(self, commit=True):
+        """
+        """
+        member = super(forms.ModelForm, self).save(commit=False)
+        password = self.cleaned_data["new_password"]
+
+        if password:
+            member.password = make_password(password)
+
+        if commit:
+            member.save()
+
+        return member
+
+
 
 class AddMainRecipeForm(forms.ModelForm):
     """
@@ -124,12 +211,6 @@ class AddSecondaryRecipeForm(forms.ModelForm):
             "short_description": "courte présentation",
         }
 
-    # RATING_CHOICES = [(None, 'Sélectionner une note')] + [(i, str(i)) for i in range(1, 6)]
-    # rating = forms.ChoiceField(
-    #     choices=RATING_CHOICES,
-    #     required=False,
-    #     widget=forms.Select(),
-    # )
 
 class AddRecipeCombinedForm(forms.Form):
     """
@@ -360,6 +441,25 @@ class SearchRecipeForm(forms.Form):
     category = forms.ChoiceField(label="type de plat:", choices=[("", "tous")] + Recipe.CATEGORY_CHOICES, required=False)
     collection = forms.ChoiceField(label="collection:", choices=collection_choices, required=False)
     member = forms.ChoiceField(label="membres:", choices=member_choices, required=False)
+    ingredient_1 = forms.CharField(label="ingredient 1:", required=False)
+    ingredient_2 = forms.CharField(label="ingredient 2:", required=False)
+    ingredient_3 = forms.CharField(label="ingredient 3:", required=False)
+
+class FilterRecipeCollectionForm(forms.Form):
+    collection_choices = [
+        ("RecipeToTryEntry", "recette à essayer"),
+        ("RecipeHistoryEntry", "historique de recettes"),
+        ("RecipeAlbumEntry", "album de recettes")
+    ]
+
+    title = forms.CharField(label="titre de la recette:", required=False)
+    category = forms.ChoiceField(label="type de plat:", choices=[("", "tous")] + Recipe.CATEGORY_CHOICES, required=False)
+    collection = forms.ChoiceField(label="collection:", choices=collection_choices, required=True)
+    member =  forms.ModelChoiceField(
+        label="membre",
+        queryset=Member.objects.all(),
+        required=True
+    )
     ingredient_1 = forms.CharField(label="ingredient 1:", required=False)
     ingredient_2 = forms.CharField(label="ingredient 2:", required=False)
     ingredient_3 = forms.CharField(label="ingredient 3:", required=False)

@@ -120,14 +120,6 @@ h2 a, h3 a {
     z-index: 1000;
 }
 
-.dropdown-menu a {
-    display: block;
-    padding: 10px 20px;
-    color: var(--couleur-texte-principale);
-    text-decoration: none;
-    white-space: nowrap;
-}
-
 .dropdown-item {
     display: block;
     padding: 10px 20px;

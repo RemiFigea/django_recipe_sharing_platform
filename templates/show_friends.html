@@ -18,8 +18,18 @@
             <li class="dropdown">
                 <a class="friends">{{ friend.username }}</a>
                 <div class="dropdown-menu">
-                    <a class="dropdown-item" href="/show-recipe-collection?collection_model=RecipeAlbumEntry&member_id={{ friend.id }}">Album de recettes</a>
-                    <a class="dropdown-item" href="/show-recipe-collection?collection_model=RecipeHistoryEntry&member_id={{ friend.id }}">Historique de recettes</a>
+                    <form method="post" action="show-recipe-collection">
+                        {% csrf_token %}
+                        <input type="hidden" name="collection" class="hidden" value="RecipeAlbumEntry">
+                        <input type="hidden" name="member" value="{{ friend.id }}">
+                        <input class="dropdown-item" type="submit" value="Album de recettes">
+                    </form>
+                    <form method="post" action="show-recipe-collection">
+                        {% csrf_token %}
+                        <input type="hidden" name="collection" class="hidden" value="RecipeHistoryEntry">
+                        <input type="hidden" name="member" value="{{ friend.id }}">
+                        <input class="dropdown-item" type="submit" value="Historique de recettes">
+                    </form>
                     <form action="/show-friends" method="post" style="display: inline-block;">
                         {% csrf_token %}
                         <input type="hidden" name="username_to_remove" value="{{ friend.username }}">

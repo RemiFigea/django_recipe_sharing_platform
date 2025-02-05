@@ -110,6 +110,9 @@ class BaseRecipeCollectionEntry(models.Model):
     saving_date = models.DateField(default=date.today)
     personal_note = models.TextField(null=True, blank=True)
 
+    def get_collection_name(self):
+        return self.__class__.__name__
+
     class Meta:
         abstract = True
 
@@ -117,19 +120,20 @@ class RecipeAlbumEntry(BaseRecipeCollectionEntry):
     """
     Represents an entry in a member's recipe album.
     """
-    collection_title = "Album de recettes"
+    title = "Album de recettes"
+
 
 class RecipeToTryEntry(BaseRecipeCollectionEntry):
     """
     Represents an entry in a member's list of recipes to try.
     """
-    collection_title = "Recettes à essayer"
+    title = "Recettes à essayer"
 
 class RecipeHistoryEntry(BaseRecipeCollectionEntry):
     """
     Represents an entry in a member's recipe history.
     """
-    collection_title = "Historique de recettes"
+    title = "Historique de recettes"
 
 class Comment(models.Model):
     """

@@ -25,16 +25,35 @@
                     <div class="dropdown">
                         <a class="header-link" id="login" href="welcome">{{ logged_user.username }}</a>
                         <div class="dropdown-menu">
-                            <a href="/show-recipe-collection?collection_model=RecipeHistoryEntry&member_id={{ logged_user.id }}">Mon historique de recettes</a>
-                            <a class="not-implemented">Modifier mon profil</a>
-                            <a href="logout">Me déconnecter</a>
+                            <form method="post" action="show-recipe-collection">
+                                {% csrf_token %}
+                                <input type="hidden" name="collection" class="hidden" value="RecipeHistoryEntry">
+                                <input type="hidden" name="member" value="{{ logged_user.id }}">
+                                <input class="dropdown-item" type="submit" value="Mon historique de recettes">
+                            </form>
+                            <a class="dropdown-item" href="modify-profile">Modifier mon profil</a>
+                            <a class="dropdown-item" href="logout">Me déconnecter</a>
                         </div>
                     </div>
                     {% endif %}
                 </li>
                 <li><a class="header-link" href="add-recipe">Editer une recette</a></li>
-                <li><a class="header-link" href="/show-recipe-collection?collection_model=RecipeAlbumEntry&member_id={{ logged_user.id }}">Mon album de recettes</a></li>
-                <li><a class="header-link" href="/show-recipe-collection?collection_model=RecipeToTryEntry&member_id={{ logged_user.id }}">Mes recettes à essayer</a></li>
+                <li>
+                    <form method="post" action="show-recipe-collection">
+                        {% csrf_token %}
+                        <input type="hidden" name="collection" class="hidden" value="RecipeAlbumEntry">
+                        <input type="hidden" name="member" value="{{ logged_user.id }}">
+                        <input  class="header-link"  type="submit" value="Mon album de recettes">
+                    </form>
+                </li>
+                <li>
+                    <form method="post" action="show-recipe-collection" class="header-link" >
+                        {% csrf_token %}
+                        <input type="hidden" name="collection" class="hidden" value="RecipeToTryEntry">
+                        <input type="hidden" name="member" value="{{ logged_user.id }}">
+                        <input class="header-link" type="submit" value="Mes recettes à essayer">
+                    </form>
+                </li>
                 <li><a class="header-link" href="/show-friends">Mes amis</a></li>
             </ul>         
   

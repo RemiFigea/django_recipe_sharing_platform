@@ -3,6 +3,7 @@
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_show_recipe_collection.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/style_search_recipe.css' %}" />
 {% endblock %}
 
 {% block title %}Collection de recettes{% endblock %}
@@ -11,7 +12,10 @@
 
 {% block content %}
 <div class="section-title">
-    <h1>{{ collection_model.collection_title }} de {{ member.username }}</h1>
+    <h1>{{ collection_model.title }} de {{ member.username }}</h1>
+</div>
+<div class="section-filter">
+    {{ form|safe }}
 </div>
 <section class="thumbnail-recipes">
 {% for entry in recipe_entries %}
@@ -19,7 +23,7 @@
         <div class="img-placeholder">
         <img class="recipe-img" src="{{ MEDIA_URL }}{{ entry.recipe.image }}" alt="{{ entry.recipe.title }}">
         </div>
-        {% if  collection_model_name == "RecipeAlbumEntry" or collection_model_name == "RecipeToTryEntry" %}
+        {% if  collection_model.get_collection_name == "RecipeAlbumEntry" or collection_model.get_collection_name == "RecipeToTryEntry" %}
         <div class="recipe-description">
             <h3><a id="title" href="show-recipe?recipeId={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
             <div class="recipe-metrix">
@@ -34,7 +38,7 @@
             </div>
         </div>
 
-        {% elif collection_model_name == "RecipeHistoryEntry" %}
+        {% elif collection_model.get_collection_name == "RecipeHistoryEntry" %}
         <div class="recipe-description-history">
             <h3><a id="title" href="show-recipe?recipeId={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
             <div class="recipe-metrix">

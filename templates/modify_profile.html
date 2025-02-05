@@ -2,17 +2,17 @@
 {% load static %}
 {% block head %}<link rel="stylesheet" type="text/css" href="{% static 'css/style_profile.css' %}" />{% endblock %}
 
-{% block title %}Création d'un profil{% endblock %}
+{% block title %}Modification d'un profil{% endblock %}
 
-{% block bodyId %}registrationPage{% endblock %}
+{% block bodyId %}modifyProfilePage{% endblock %}
 
 {% block content %}
-<h1>Créer mon espace</h1>
-<form action="register" method="post">
+<h1>Modifier mon profil</h1>
+<form action="modify-profile" method="post">
     {% csrf_token %}
     {{ form.as_p }}
     <p class="submit-section">
-        <input type="submit" class="btn btn-validate" value="Créer" />
+        <input type="submit" class="btn btn-validate" value="Modifier" />
         <a href="/welcome">Retour vers la page d'accueil</a>
     </p>
 </form>

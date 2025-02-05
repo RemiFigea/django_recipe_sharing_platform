@@ -15,14 +15,19 @@ Views included:
 """
 
 from django.conf import settings
-from django.contrib import messages
 from django.template.loader import render_to_string
 from django.shortcuts import redirect, render
-from recipe_journal.forms import LoginForm, AddFriendForm
+from recipe_journal.forms import LoginForm, AddFriendForm, ModifyProfileForm
 from recipe_journal.forms import RegistrationForm, SearchRecipeForm
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
 import recipe_journal.utils.utils as ut
 from recipe_journal.models import Recipe, RecipeHistoryEntry, RecipeAlbumEntry, RecipeToTryEntry
+
+MODEL_MAP = {
+        "RecipeAlbumEntry": RecipeAlbumEntry,
+        "RecipeToTryEntry": RecipeToTryEntry,
+        "RecipeHistoryEntry": RecipeHistoryEntry
+    }
 
 def login(request):
     """
@@ -63,7 +68,24 @@ def register(request):
     else:
         form = RegistrationForm()
         return render(request, "register.html", {"form": form})
-    
+
+def modify_profile(request):
+    logged_user = ut.get_logged_user(request)
+    if not logged_user:
+        return redirect("/login")
+    if request.method == "POST" and len(request.POST)>0:
+        form = ModifyProfileForm(request.POST, instance=logged_user, logged_user=logged_user)
+        if form.is_valid():
+           form.save()
+           return redirect("/login")
+        else:
+            return render(request, "modify_profile.html", {"form": form, "logged_user": logged_user})
+    else:
+        form = ModifyProfileForm(instance=logged_user, logged_user=logged_user)
+    return render(request, "modify_profile.html", {"form": form, "logged_user": logged_user})
+
+
+
 def welcome(request):
     """
     Displays the homepage with a list of popular recipes, thumbnails, and logged-in user information if available.
@@ -170,34 +192,23 @@ def show_recipe_collection(request):
     logged_user = ut.get_logged_user(request)
     if not logged_user:
         return redirect("/login")
-
-    if not (request.method == "GET" and "collection_model" in request.GET and "member_id" in request.GET):
-        return redirect("/welcome")
-
-    collection_model_name = request.GET["collection_model"]
-    model_map = {
-            "RecipeAlbumEntry": RecipeAlbumEntry,
-            "RecipeToTryEntry": RecipeToTryEntry,
-            "RecipeHistoryEntry": RecipeHistoryEntry
-        }
-    collection_model = model_map.get(collection_model_name)
-
-    if not collection_model:
-        return redirect("/welcome")
     
-    member_id = request.GET["member_id"]
-    member = Member.objects.get(id=member_id)
-    recipe_entries = ut.get_recipe_entries_for_member(collection_model, member)
+    form, recipe_collection_entries = ut.filter_recipe_collection(request)
 
-    if recipe_entries is None:
+    if not form:
         return redirect("/welcome")
 
+    form_html = render_to_string("partials/form_filter_recipe_collection.html", {"form": form}, request=request)
+    member = form.cleaned_data.get("member")
+    collection_name = form.cleaned_data.get("collection")
+    collection_model = MODEL_MAP.get(collection_name)
+    
     context = {
         "logged_user": logged_user,
+        "form": form_html,
         "member": member,
-        "recipe_entries": recipe_entries,
         "collection_model": collection_model,
-        "collection_model_name": collection_model_name,
+        "recipe_entries": recipe_collection_entries,
         "MEDIA_URL": settings.MEDIA_URL,
     }
     return render(request, "show_recipe_collection.html", context)

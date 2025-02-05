@@ -87,4 +87,13 @@ dt {
     margin: 0;
 }
 
+.section-filter {
+    display: flex;
+    justify-content: center;
+    width: 80%;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: var(--couleur-secondaire) solid 2px;
+}
+
 

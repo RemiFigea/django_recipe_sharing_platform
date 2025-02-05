@@ -4,13 +4,19 @@ from django.contrib import messages
 from django.forms import ValidationError
 from django import forms
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
-from recipe_journal.forms import  AddFriendForm, AddRecipeIngredientForm, AddRecipeCombinedForm, RecipeActionForm
-from recipe_journal.forms import SearchRecipeForm
+from recipe_journal.forms import  AddFriendForm, AddRecipeIngredientForm, AddRecipeCombinedForm
+from recipe_journal.forms import FilterRecipeCollectionForm, RecipeActionForm, SearchRecipeForm
 import random as rd
 import spacy
 import time
 
-nlp = spacy.load("fr_core_news_sm")
+#nlp = spacy.load("fr_core_news_sm")
+
+MODEL_MAP = {
+        "RecipeAlbumEntry": RecipeAlbumEntry,
+        "RecipeToTryEntry": RecipeToTryEntry,
+        "RecipeHistoryEntry": RecipeHistoryEntry
+    }
 
 def get_logged_user(request):
     """
@@ -365,7 +371,8 @@ def get_ingredient_inputs(form):
 
     for i in range(1, 4):
         ingredient_name = form.cleaned_data.get(f"ingredient_{i}")
-        ingredient_inputs_dict[f"ingredient_{i}"] = normalize_ingredient(ingredient_name)
+        #ingredient_inputs_dict[f"ingredient_{i}"] = normalize_ingredient(ingredient_name)
+        ingredient_inputs_dict[f"ingredient_{i}"] = ingredient_name
     return ingredient_inputs_dict
 
 def filter_by_collection(collection):
@@ -378,11 +385,6 @@ def filter_by_collection(collection):
     Returns:
     - QuerySet: A QuerySet of recipe collection objects belonging to the specified collection, or an empty QuerySet if the collection is not found.
     """
-    MODEL_MAP = {
-        "RecipeAlbumEntry": RecipeAlbumEntry,
-        "RecipeToTryEntry": RecipeToTryEntry,
-        "RecipeHistoryEntry": RecipeHistoryEntry
-    }
     collection_model = MODEL_MAP.get(collection)
 
     if collection_model:
@@ -390,7 +392,6 @@ def filter_by_collection(collection):
         return collection_model.objects.filter(recipe__in=recipe_ids)
 
     return RecipeAlbumEntry.objects.none()
-
 
 def filter_by_member(logged_user, member, recipe_collection_qs_list):
     """
@@ -455,3 +456,51 @@ def handle_search_recipe_request(request, logged_user):
         
     return form, recipe_entries
 
+def filter_recipe_collection(request):
+    """
+    Filters recipe collections based on form data.
+
+    Parameters:
+    - request (HttpRequest): The request object containing form data for filtering.
+
+    Returns:
+    - tuple: A tuple containing:
+        - form (FilterRecipeCollectionForm or None): The form with the submitted data.
+        - recipe_collection_entries (QuerySet or None): A QuerySet of filtered recipe collection entries.
+    
+    If the required elements are missing, the function returns (None, None).
+    """
+    form = FilterRecipeCollectionForm()
+    recipe_collection_entries = None
+
+    if request.method == "POST":
+        form = FilterRecipeCollectionForm(request.POST)
+        
+        if form.is_valid():
+            member = form.cleaned_data.get("member")
+            collection_model_name = form.cleaned_data.get("collection")
+            title = form.cleaned_data.get("title")
+            category = form.cleaned_data.get("category")
+            ingredient_inputs_dict = get_ingredient_inputs(form)
+            collection_model = MODEL_MAP.get(collection_model_name)
+            
+            if not (member and collection_model):
+                return None, None
+
+            recipe_collection_entries = collection_model.objects.filter(member=member)
+
+            filters = {}
+            if title:
+                filters["recipe__title__icontains"] = title
+            if category:
+                filters["recipe__category"] = category
+
+            recipe_collection_entries = recipe_collection_entries.filter(**filters)
+
+            for ingredient_name in ingredient_inputs_dict.values():
+                if ingredient_name:
+                     recipe_collection_entries =  recipe_collection_entries.filter(recipe__recipe_ingredient__ingredient__name__icontains=ingredient_name)
+    
+        return form, recipe_collection_entries
+
+    return None, None

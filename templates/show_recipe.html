@@ -16,68 +16,71 @@
 {% include "partials/modal_add_recipe_history.html" %}
 {% include "partials/modal_remove_recipe_history.html" %}
 </div>
-<div class="section-title">
+
+<div class="section-title section-title--recipepage">
     <h1>Titre de la recette: {{ recipe.title }}</h1>
     <p>Lien web: <a href={{ recipe.url_link }}>{{ recipe.url_link }}</a></p>
     <div id="collection-buttons" current-recipe-id="{{ recipe.id }}">
         <div class="dropdown"  model-name="RecipeAlbumEntry">
             <button class="collection-button" id="album-button" type="button">mon album</button>
             <div class="dropdown-menu">
-                <a class="add-to-collection" id="add-to-album">Ajouter à mon album</a>
-                <a class="remove-from-collection" id="remove-from-album">Retirer de mon album</a>
+                <button type="button" class="dropdown-item add-to-collection" id="add-to-album">Ajouter à mon album</button>
+                <button type="button" class="dropdown-item remove-from-collection" id="remove-from-album">Retirer de mon album</button>
             </div>
         </div>
         <div class="dropdown" model-name="RecipeHistoryEntry">
             <button class="collection-button" id="history-button" type="button">mon historique</button>
             <div class="dropdown-menu">
-                <a class="add-to-collection" id="add-to-history">Ajouter à mon historique</a>
-                <a class="remove-from-collection" id="remove-from-history">Retirer de mon historique</a>
+                <button type="button" class="dropdown-item add-to-collection" id="add-to-history">Ajouter à mon historique</button>
+                <button type="button" class="dropdown-item remove-from-collection" id="remove-from-history">Retirer de mon historique</button>
             </div>
         </div>
         <div class="dropdown" model-name="RecipeToTryEntry">
             <button class="collection-button" id="recipe-to-try-button" type="button">mes recettes à essayer</button>
             <div class="dropdown-menu">
-                <a class="add-to-collection" id="add-to-recipe-to-try">Ajouter à mes recettes à essayer</a>
-                <a class="remove-from-collection" id="remove-from-recipe-to-try">Retirer de mes recettes à essayer</a>
+                <button type="button" class="dropdown-item add-to-collection" id="add-to-recipe-to-try">Ajouter à mes recettes à essayer</button>
+                <button type="button" class="dropdown-item remove-from-collection" id="remove-from-recipe-to-try">Retirer de mes recettes à essayer</button>
             </div>
         </div>
     </div>
 </div>
 
-<div id="recipe-overview">
-    <div id="section-intro">
-        <div class="img-placeholder"><img class="recipe-img" src="{{ MEDIA_URL }}{{ recipe.image }}" alt="{{ recipe.title }}"></div>
-        <p id="recipe-description">{{ recipe.short_description }}</p>
-    </div>
-    <div class="side-bar">
-        <dl>
-            <dt>Temps de cuisson</dt>
-            <dd>{{ recipe.cooking_time }}</dd>
-            <dt>Temps de repos</dt>
-            <dd>{{ recipe.resting_time }}</dd>
-            <dt>Préparation</dt>
-            <dd>{{ recipe.cooking_preparation }}</dd>
-        </dl>
-    </div>
-</div>
-<div id="recipe-content">
-    <div id="main-content">
-        <div class="text-placeholder">
-            <h2>Etapes de la recette</h2>
-            <p>{{ recipe.content }}</p>
+<div class="section-content section-content--recipepage">
+    <div class="recipe-content">
+        <div class="central-content">
+            <div class="img-placeholder"><img class="recipe-img" src="{{ MEDIA_URL }}{{ recipe.image }}" alt="{{ recipe.title }}"></div>
+            <p class="short-description">{{ recipe.short_description }}</p>
         </div>
-        <div class="text-placeholder">
-            <h2>Commentaires</h2>
-            <p>commentaires</p>
+        <div class="side-bar">
+            <dl>
+                <dt>Temps de cuisson</dt>
+                <dd>{{ recipe.cooking_time }}</dd>
+                <dt>Temps de repos</dt>
+                <dd>{{ recipe.resting_time }}</dd>
+                <dt>Préparation</dt>
+                <dd>{{ recipe.cooking_preparation }}</dd>
+            </dl>
         </div>
     </div>
-    <div class="side-bar">
-        <dl>
-        {% for recipe_ingredient in recipe.recipe_ingredient.all %}
-            <dt>{{ recipe_ingredient.quantity }} {{ recipe_ingredient.unit }} </dt>
-            <dd>{{ recipe_ingredient.ingredient.name }}</dd>
-        {% endfor %}
-        </dl>
+    <div class="recipe-content recipe-content--main">
+        <div class="central-content central-content--main">
+            <div class="text-placeholder">
+                <h2>Etapes de la recette</h2>
+                <p>{{ recipe.content }}</p>
+            </div>
+            <div class="text-placeholder">
+                <h2>Commentaires</h2>
+                <p>commentaires</p>
+            </div>
+        </div>
+        <div class="side-bar">
+            <dl>
+            {% for recipe_ingredient in recipe.recipe_ingredient.all %}
+                <dt>{{ recipe_ingredient.quantity }} {{ recipe_ingredient.unit }} </dt>
+                <dd>{{ recipe_ingredient.ingredient.name }}</dd>
+            {% endfor %}
+            </dl>
+        </div>
     </div>
 </div>
 <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>

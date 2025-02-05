@@ -1,22 +1,31 @@
-.section-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 80%;
-    border-bottom: var(--couleur-secondaire) solid 2px;
-}
-
 h2 {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    border-bottom: 2px solid #000;
-    padding-bottom: 10px; 
+    padding-bottom: 10px;
+    border-bottom: var(--couleur-secondaire) solid 2px;
 }
 
-form#add-recipe {
+input[type="text"], input[type="url"] {
+    width: 300px;
+}
+
+input[type="number"] {
+    width: 50px;
+}
+
+input[type="checkbox"] {
+    order: 1;
+}
+
+textarea {
+    width: 80%;
+    height: 150px;
+    box-sizing: border-box;
+}
+
+.form-add-recipe {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -33,33 +42,60 @@ form#add-recipe {
     box-sizing: border-box;
 }
 
-.form {
+.form-recipe {
     width: 100%
 }
-.form p {
+
+.form-recipe p {
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
     width:100%;
 }
 
-.form label{
+.form-recipe label{
     text-align: right;
     width: 20%;
     margin-bottom: 5px;
 }
 
-input[type="text"], input[type="url"] {
-    width: 300px;
-}
-input[type="number"] {
-    width: 50px;
+.form-ingredient {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
-textarea {
-    width: 80%;
-    height: 150px;
+.form-ingredient p {
+    display: flex;
+    flex-direction: column;
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;   
+}
+
+.form-ingredient p {
+    align-self: flex-end;
+}
+
+.form-ingredient .btn {
+    margin: 1px 0px;
+    align-self: flex-end;
+}
+
+.form-action p {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-action label {
+order: 2;
+}
+
+.section-submit {
+    align-self: center;
 }
 
 #section-ingredient {
@@ -68,52 +104,6 @@ textarea {
     width:100%;
 }
 
-.ingredient-form {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-
-.ingredient-form p {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;   
-}
-
 input#id_unit {
     width: 100px; 
-}
-
-#remove-ingredient-btn {
-    justify-self: flex-end;
-}
-
-#action-form p {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .custom-checkbox {
-    order: 1;
-  }
-  
-  #action-form label {
-    order: 2;
-  }
-
-
-.submit-section {
-    align-self: center;
-    margin-top: 20px;
-}
-
-.ingredient-form .btn {
-    margin: 1px 0px;
-    align-self: flex-end;
 }

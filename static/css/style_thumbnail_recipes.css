@@ -43,17 +43,7 @@
 }
 
 .thumbnail-recipes .img-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
     min-height: 100px;
-    background-color: var(--couleur-tertiaire);
-}
-
-.thumbnail-recipes .recipe-img {
-    width: 100%;
-    height: auto;
 }
 
 .thumbnail-recipes .recipe-description {

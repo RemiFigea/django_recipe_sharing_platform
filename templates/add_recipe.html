@@ -13,14 +13,14 @@
 </div>
 
 <div class="section-content">
-    <form action="add-recipe" method="POST" id="add-recipe" enctype="multipart/form-data">
+    <form action="add-recipe" method="POST" class="form-add-recipe" enctype="multipart/form-data">
         {% csrf_token %}
         <h2>Informations principales</h2>
         <div class="form-subsection">
-            <div class="form">{{ recipe_form.main_form.as_p }}</div>
+            <div class="form-recipe">{{ recipe_form.main_form.as_p }}</div>
             <div id="section-ingredient">
                 {% for recipe_ingredient_form in recipe_ingredient_form_list %}
-                <div class="ingredient-form">
+                <div class="form-ingredient">
                     {{ recipe_ingredient_form.as_p}}
                     <button type="button" class="btn btn-secondary">supprimer</button>
                 </div>
@@ -31,9 +31,9 @@
         </div>
         <h2>Informations additionnelles</h2>
         <div class="form-subsection">
-            <div class="form">{{ recipe_form.secondary_form.as_p }}</div>
-            <div id="action-form">{{recipe_action_form.as_p }}</div>
-            <p class="submit-section">
+            <div class="form-recipe">{{ recipe_form.secondary_form.as_p }}</div>
+            <div class="form-action">{{recipe_action_form.as_p }}</div>
+            <p class="section-submit">
                 <input type="submit" class="btn" value="Enregistrer la recette"/>
                 <a href="welcome">Retour vers la page d'accueil</a>
             </p>

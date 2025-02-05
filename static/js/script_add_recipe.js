@@ -34,7 +34,7 @@ async function checkTitle() {
 };
 
 function hideLabelsExceptFirst() {
-    const ingredientForms = document.querySelectorAll(".ingredient-form");
+    const ingredientForms = document.querySelectorAll(".form-ingredient");
 
     ingredientForms.forEach((form, index) => {
         const labels = form.querySelectorAll("label");
@@ -78,9 +78,10 @@ async function addIngredientForm() {
 
 function removeIngredientForm(event) {
     if (event.target.classList.contains("btn-secondary")) {
-        const ingredientForm = event.target.closest(".ingredient-form");
+        const ingredientForm = event.target.closest(".form-ingredient");
         if (ingredientForm) {
             ingredientForm.remove();
+            hideLabelsExceptFirst();
         }
     }
 }

@@ -1,3 +1,18 @@
+label {
+    width: 80px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+input[type="text"] {
+    width: 100px;
+}
+
+select {
+    width: 150px;
+}
+
 .section-filter {
     display: flex;
     justify-content: center;
@@ -6,6 +21,7 @@
     margin-bottom: 20px;
     border-bottom: var(--couleur-secondaire) solid 2px;
 }
+
 .form-container {
     display: flex;
     justify-content: flex-start;
@@ -20,12 +36,9 @@
     gap:3px;
 }
 
-
-label {
-    width: 80px;
-    text-align: right;
-    white-space: nowrap;
-    overflow: visible;
+.form-column .btn {
+    margin-top: 3px;
+    margin-bottom: 0;
 }
 
 #form-title {
@@ -36,24 +49,7 @@ label {
     width: 120px;
 }
 
-input[type="text"] {
-    width: 100px;
-}
-select {
-    width: 150px;
-}
-
 #id_title {
     width: 200px;
 }
-
-.form-column .btn {
-    margin-top: 3px;
-    margin-bottom: 0;
-}
-
-.hidden {
-    display: none;
-}
-
 

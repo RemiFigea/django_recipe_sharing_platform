@@ -12,11 +12,11 @@
 <div class="section-title">
     <h1> Mes {{ friends.count }} amis </h1>
 </div>
-<div class="section-friend">
-    <ul id="friend-list">
+<div class="section-content section-content--friends">
+    <ul class="friend-list">
         {% for friend in friends.all %}
             <li class="dropdown">
-                <a class="friends">{{ friend.username }}</a>
+                <button type="button">{{ friend.username }}</button>
                 <div class="dropdown-menu">
                     <form method="post" action="show-recipe-collection">
                         {% csrf_token %}
@@ -40,8 +40,8 @@
         {% endfor %}
     </ul>
 </div>
-<div class="section-form">
-    <ul id="error-message">
+<div class="section-content">
+    <ul class="error-message">
         {% if messages %}
                 {% for message in messages %}
                     <li>{{ message }}</li>
@@ -55,7 +55,7 @@
             {% endfor %}
         {% endif %}
     </ul>
-    <form id="form-add-friend" action="/show-friends" method="get">
+    <form class="form-add-friend" action="/show-friends" method="get">
         {{ form.as_p }}
         <input type="submit" class="btn btn-validate" value="ajouter à ma liste d'amis"/>
     </form>

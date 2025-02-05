@@ -349,21 +349,21 @@ class RecipeActionForm(forms.Form):
     add_to_album = forms.BooleanField(
         required= False,
         initial= True,
-        widget=forms.CheckboxInput(attrs={'class': 'custom-checkbox'}),
+        widget=forms.CheckboxInput,
         label="Ajouter la recette à mon album de recettes",
         label_suffix="",
     )
     add_to_history = forms.BooleanField(
         required= False,
         initial= False,
-        widget=forms.CheckboxInput(attrs={'class': 'custom-checkbox'}),
+        widget=forms.CheckboxInput,
         label="Ajouter la recette à mon historique",
         label_suffix="",
     )
     add_to_recipe_to_try = forms.BooleanField(
         required=False,
         initial= False,
-        widget=forms.CheckboxInput(attrs={'class': 'custom-checkbox'}),
+        widget=forms.CheckboxInput,
         label="Ajouter la recette à ma liste de recettes à essayer",
         label_suffix="",
     )

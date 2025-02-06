@@ -24,8 +24,8 @@ class LoginForm(forms.Form):
     """
     Form to handle user login by capturing and validating the username and password.
     """
-    username = forms.CharField(label="identifiant")
-    password = forms.CharField(label="mot de passe", widget = forms.PasswordInput)
+    username = forms.CharField(label="identifiant", required=True)
+    password = forms.CharField(label="mot de passe", widget = forms.PasswordInput, required=True)
 
     def clean(self):
         """
@@ -58,18 +58,16 @@ class RegistrationForm(forms.ModelForm):
         }
         widgets = {"password": forms.PasswordInput()}
 
-    def clean(self):
+    def clean_username(self):
         """
         Ensures the username is unique and not already taken by another user.
         """
-        cleaned_data = super().clean()
-        username = cleaned_data.get("username")
-        password = cleaned_data.get("password")
+        username = self.cleaned_data.get("username")
 
-        if username and password:
+        if username:
             if Member.objects.filter(username=username).exists():
                 raise forms.ValidationError("Identifiant non disponible.")
-        return cleaned_data
+        return username
     
     def save(self, commit=True):
         """
@@ -85,7 +83,7 @@ class RegistrationForm(forms.ModelForm):
 
         return member
     
-class ModifyProfileForm(RegistrationForm):
+class ModifyProfileForm(forms.ModelForm):
     former_password = forms.CharField(
         label="Ancien mot de passe",
         widget=forms.PasswordInput(),
@@ -103,49 +101,56 @@ class ModifyProfileForm(RegistrationForm):
     )
 
     class Meta(RegistrationForm.Meta):
+        model = Member
         fields = ["username", "former_password", "new_password", "confirm_new_password"]
         labels = {
             "username": "Identifiant",
         }
+        edit_only = True
 
     def __init__(self, *args, logged_user=None, **kwargs):
         self.logged_user = logged_user
         super().__init__(*args, **kwargs)
 
-    def clean(self):
-        cleaned_data = super(forms.ModelForm, self).clean()
-        username = cleaned_data.get("username")
-        former_password = cleaned_data.get("former_password")
-        new_password = cleaned_data.get("new_password")
-        confirm_new_password = cleaned_data.get("confirm_new_password")
-
+    def clean_username(self):
+        username = self.cleaned_data.get("username")
         if username and username != self.logged_user.username:
             if Member.objects.filter(username=username).exists():
                 raise forms.ValidationError("Identifiant non disponible.")
+        return username
 
+    def clean_former_password(self):
+        former_password = self.cleaned_data.get("former_password")
         if not check_password(former_password, self.logged_user.password):
             raise forms.ValidationError("Ancien mot de passe erroné.")
-
+        return former_password
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password = cleaned_data.get("new_password")
+        confirm_new_password = cleaned_data.get("confirm_new_password")
         if new_password != confirm_new_password:
             raise forms.ValidationError("Les nouveaux mots de passe ne correspondent pas.")
 
         return cleaned_data
+
     
     def save(self, commit=True):
         """
         """
-        member = super(forms.ModelForm, self).save(commit=False)
-        password = self.cleaned_data["new_password"]
+        username = self.cleaned_data["username"]
+        new_password = self.cleaned_data["new_password"]
 
-        if password:
-            member.password = make_password(password)
+        member = self.logged_user
+        member.username = username
+
+        if new_password:
+            member.password = make_password(new_password)
 
         if commit:
             member.save()
 
         return member
-
-
 
 class AddMainRecipeForm(forms.ModelForm):
     """
@@ -176,18 +181,17 @@ class AddMainRecipeForm(forms.ModelForm):
             "content": forms.Textarea(attrs={"placeholder": "Écrire ou copier/coller les étapes de la recette ici ..."}),
         }
 
-    def clean(self):
+    def clean_title(self):
         """
         Checks that the recipe title is unique and not already in use.
         """
-        cleaned_data = super().clean()
-        title = cleaned_data.get("title")
+        title = self.cleaned_data.get("title")
 
         if title:
             if Recipe.objects.filter(title=title).exists():
                 raise forms.ValidationError("Titre déjà utilisé.")
             
-        return cleaned_data
+        return title
 
 class AddSecondaryRecipeForm(forms.ModelForm):
     """
@@ -210,7 +214,6 @@ class AddSecondaryRecipeForm(forms.ModelForm):
             "resting_time": "Temps de repos (en minutes)",
             "short_description": "courte présentation",
         }
-
 
 class AddRecipeCombinedForm(forms.Form):
     """
@@ -308,38 +311,6 @@ class AddRecipeIngredientForm(forms.ModelForm):
 
         return instance
     
-class AddFriendForm(forms.Form):
-    """
-    Form for adding a friend to the logged-in user's friend list.
-    Verifies that the user exists and is not already in the friend list.
-    """
-    username_to_add = forms.CharField(
-        label="Identifiant",
-        required=True,
-        widget=forms.TextInput(attrs={"placeholder": "identifiant de l'ami à ajouter"})
-    )
-
-    def __init__(self, *args, logged_user=None, **kwargs):
-        self.logged_user = logged_user
-        super().__init__(*args, **kwargs)
-
-    def clean(self):
-        """
-        Validates that the username exists and is not already a friend of the logged-in user.
-        """
-        cleaned_data = super().clean()
-        username_to_add = cleaned_data.get("username_to_add")
-
-        try:
-            friend = Member.objects.get(username=username_to_add)
-        except Member.DoesNotExist:
-            raise forms.ValidationError(f"Aucun utilisateur trouvé avec l'identifiant '{username_to_add}'.")
-
-        if self.logged_user and self.logged_user.friends.filter(id=friend.id).exists():
-            raise forms.ValidationError(f"'{username_to_add}' fait déjà partie de vos amis.")
-
-        return cleaned_data
-
 class RecipeActionForm(forms.Form):
     """
     Form to manage the actions of adding a recipe to various collections 
@@ -380,6 +351,38 @@ class RecipeActionForm(forms.Form):
         if not (add_to_album or add_to_history or add_to_recipe_to_try):
             raise forms.ValidationError("Vous devez cocher au moins une option.")
         
+        return cleaned_data
+    
+class AddFriendForm(forms.Form):
+    """
+    Form for adding a friend to the logged-in user's friend list.
+    Verifies that the user exists and is not already in the friend list.
+    """
+    username_to_add = forms.CharField(
+        label="Identifiant",
+        required=True,
+        widget=forms.TextInput(attrs={"placeholder": "identifiant de l'ami à ajouter"})
+    )
+
+    def __init__(self, *args, logged_user=None, **kwargs):
+        self.logged_user = logged_user
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        """
+        Validates that the username exists and is not already a friend of the logged-in user.
+        """
+        cleaned_data = super().clean()
+        username_to_add = cleaned_data.get("username_to_add")
+
+        try:
+            friend = Member.objects.get(username=username_to_add)
+        except Member.DoesNotExist:
+            raise forms.ValidationError(f"Aucun utilisateur trouvé avec l'identifiant '{username_to_add}'.")
+
+        if self.logged_user and self.logged_user.friends.filter(id=friend.id).exists():
+            raise forms.ValidationError(f"'{username_to_add}' fait déjà partie de vos amis.")
+
         return cleaned_data
 
 class AddRecipeHistoryForm(forms.ModelForm):

@@ -76,15 +76,13 @@ def modify_profile(request):
     if request.method == "POST" and len(request.POST)>0:
         form = ModifyProfileForm(request.POST, instance=logged_user, logged_user=logged_user)
         if form.is_valid():
-           form.save()
-           return redirect("/login")
+            form.save()
+            return redirect("/login")
         else:
             return render(request, "modify_profile.html", {"form": form, "logged_user": logged_user})
     else:
         form = ModifyProfileForm(instance=logged_user, logged_user=logged_user)
     return render(request, "modify_profile.html", {"form": form, "logged_user": logged_user})
-
-
 
 def welcome(request):
     """

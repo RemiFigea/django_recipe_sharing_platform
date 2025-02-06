@@ -26,8 +26,8 @@ from recipe_journal.views.web import welcome
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", welcome),
-    path("add-recipe", add_recipe),
+    path("", welcome, name="welcome"),
+    path("add-recipe", add_recipe, name="add_recipe"),
     path("api/add-ingredient-form", add_ingredient_form),
     path("api/add-to-collection", add_to_collection),
     path("api/add-recipe-history", add_recipe_history),
@@ -35,16 +35,16 @@ urlpatterns = [
     path("api/check-title", check_title),
     path("api/remove-from-collection", remove_from_collection),
     path("api/remove-recipe-history", remove_recipe_history),
-    path("login", login),
-    path("logout", logout),
-    path("modify-profile", modify_profile),
-    path("register", register),
+    path("login", login, name="login"),
+    path("logout", logout, name="logout"),
+    path("modify-profile", modify_profile, name="modify_profile"),
+    path("register", register, name="register"),
     path("search-recipe", search_recipe),
     path("show-confirmation-page", show_confirmation_page),
     path("show-friends", show_friends),
     path("show-recipe", show_recipe),
     path("show-recipe-collection", show_recipe_collection),
-    path("welcome", welcome),
+    path("welcome", welcome, name="welcome"),
 ]
 
 if settings.DEBUG:

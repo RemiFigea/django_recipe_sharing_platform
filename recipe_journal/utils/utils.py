@@ -49,7 +49,7 @@ def get_daily_random_sample(num_samples):
     daily_timestamp = current_timestamp // seconds_in_a_day
     
     rd.seed(daily_timestamp)
-    recipe_ids_list = list(Recipe.objects.values_list('id', flat=True))
+    recipe_ids_list = list(Recipe.objects.values_list("id", flat=True))
     
     if len(recipe_ids_list) > 0:
         random_ids = rd.sample(recipe_ids_list, min(num_samples, len(recipe_ids_list)))
@@ -96,7 +96,6 @@ def get_recipe_ingredient_list(request):
 
         recipe_ingredient_list = [{"name": name, "quantity": quantity, "unit": unit} 
                                 for name, quantity, unit in zip(name_list, quantity_list, unit_list)]
-
     return recipe_ingredient_list
 
 def get_recipe_ingredient_form_list(recipe_ingredient_list):

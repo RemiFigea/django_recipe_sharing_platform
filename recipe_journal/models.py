@@ -25,8 +25,8 @@ class Member(models.Model):
 
     A member can have multiple friends and has a username and password for authentication.
     """
-    username = models.CharField(max_length=100)
-    password = models.CharField(max_length=60)
+    username = models.CharField(max_length=100, unique=True, null=False, blank=False)
+    password = models.CharField(max_length=60, null=False, blank=False)
     friends = models.ManyToManyField('self', symmetrical=False, related_name='connected_to', blank=True)
 
 class Recipe(models.Model):
@@ -42,8 +42,8 @@ class Recipe(models.Model):
         ("dessert", "dessert"),
     ]
 
-    title = models.CharField(max_length=100)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    title = models.CharField(max_length=100, unique=True, null=False, blank=False)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, null=False, blank=False)
     source = models.CharField(max_length=100, null=True, blank=True)
     url_link = models.CharField(max_length=100, null=True, blank=True)
     short_description = models.TextField(null=True, blank=True)
@@ -52,7 +52,6 @@ class Recipe(models.Model):
     cooking_time = models.IntegerField(null=True, blank=True)
     cooking_preparation = models.IntegerField(null=True, blank=True)
     resting_time = models.IntegerField(null=True, blank=True)
-    tags = models.ManyToManyField('Tag', blank=True)
     edition_date = models.DateField(default=date.today)
     image = models.ImageField(upload_to="recipe_images/", null=True, blank=True)
 
@@ -72,7 +71,6 @@ class Recipe(models.Model):
                 self.image = compress_image(self.image)
                 
         super().save(*args, **kwargs)
-
 
 class RecipeIngredient(models.Model):
     """
@@ -145,40 +143,4 @@ class Comment(models.Model):
     recipe = models.ForeignKey("Recipe", on_delete=models.CASCADE)
     content = models.TextField()
     publication_date = models.DateField()
-
-class Rating(models.Model):
-    """
-    Represents a rating by a member for a recipe.
-
-    The rating is between 0 and 5, with one rating per member per recipe.
-    """
-    author = models.ForeignKey("Member", on_delete=models.PROTECT)
-    recipe = models.ForeignKey("Recipe", on_delete=models.PROTECT)
-
-    class Meta:
-        unique_together = ("author", "recipe")
-
-    RATING_CHOICES = [
-        (None, "Pas de note"),
-        (0, "0"),
-        (1, "1"),
-        (2, "2"),
-        (3, "3"),
-        (4, "4"),
-        (5, "5"),
-    ]
-    rating = models.IntegerField(
-        choices=RATING_CHOICES,
-        validators=[MinValueValidator(0), MaxValueValidator(5)],
-        null=True,
-        blank=True
-    )
-
-class Tag(models.Model):
-    """
-    Represents a tag associated with a recipe.
-
-    Tags help categorize recipes (e.g., vegetarian, quick).
-    """
-    name = models.CharField(max_length=50)
 

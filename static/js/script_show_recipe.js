@@ -8,13 +8,18 @@ async function updateCollectionButton(dropdown, recipeId) {
         console.error("Éléments manquants dans le dropdown.");
         return;
     }
+    
+    const requestData = {
+        recipe_id: recipeId,
+        model_name: modelName
+    };
 
     try {
-        const data = await fetchData(`api/check-collection-status?recipe_id=${encodeURIComponent(recipeId)}&model_name=${encodeURIComponent(modelName)}`);
+        const data = await fetchData(url, "POST", JSON.stringify(requestData));
         
         if (!data) return;
 
-        if (data.is_in_album) {
+        if (data.is_in_collection) {
             collectionButton.style.opacity = "1";
             removeFromCollection.style.display = "block";
             if (modelName !== "RecipeHistoryEntry") {
@@ -58,9 +63,13 @@ async function handleCollectionUpdate(event, url) {
     const modelName = dropdown.getAttribute("model-name");
 
     if (modelName === "RecipeToTryEntry" || modelName === "RecipeAlbumEntry") {
+        const requestData = {
+            recipe_id: recipeId,
+            model_name: modelName
+        };
 
         try {
-            const data = await fetchData(`${url}?recipe_id=${encodeURIComponent(recipeId)}&model_name=${encodeURIComponent(modelName)}`);
+            const data = await fetchData(url, "POST", JSON.stringify(requestData));
 
             if (!data) return;
 
@@ -176,8 +185,8 @@ function setupModal(modalId, openBtnId, formId, apiUrl, calendar) {
 
 
 function setupModals(calendar) {
-    setupModal("add-recipe-history-modal", "add-to-history", "add-recipe-history-form", "api/add-recipe-history", calendar);
-    setupModal("remove-recipe-history-modal", "remove-from-history", "remove-recipe-history-form", "api/remove-recipe-history", calendar);
+    setupModal("modal-add-recipe-history", "add-to-history", "add-recipe-history-form", "api/add-recipe-history", calendar);
+    setupModal("modal-remove-recipe-history", "remove-from-history", "remove-recipe-history-form", "api/remove-recipe-history", calendar);
 };
 
 

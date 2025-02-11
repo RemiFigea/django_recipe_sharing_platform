@@ -6,7 +6,7 @@
 {% endblock %}
 {% block title %}Amis{% endblock %}
 
-{% block bodyId %}showFriendPage{% endblock %}
+{% block bodyId %}show-friends-page{% endblock %}
 
 {% block content %}
 <div class="section-title">
@@ -55,7 +55,8 @@
             {% endfor %}
         {% endif %}
     </ul>
-    <form class="form-add-friend" action="/show-friends" method="get">
+    <form class="form-add-friend" action="/show-friends" method="post">
+        {% csrf_token %}
         {{ form.as_p }}
         <input type="submit" class="btn btn-validate" value="ajouter à ma liste d'amis"/>
     </form>

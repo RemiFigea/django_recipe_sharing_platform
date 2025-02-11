@@ -3,7 +3,7 @@ Unit tests for the module forms.py.
 """
 from django.contrib.auth.hashers import make_password
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from recipe_journal.forms import *
 from recipe_journal.models import Member, Recipe, RecipeIngredient, Ingredient
 import shutil
@@ -34,7 +34,6 @@ class LoginFormTest(TestCase):
         form = LoginForm(data=form_data)
 
         self.assertTrue(form.is_valid())    
-
 
 class RegistrationFormTest(TestCase):
     def test_username_unique(self):
@@ -127,7 +126,6 @@ class ModifyProfileFormTest(TestCase):
             form = ModifyProfileForm(data=form_dict, instance=self.member, logged_user=self.member)
             self.assertTrue(form.is_valid())
 
-
 class RecipeActionFormTest(TestCase):
     def test_form_checkboxes(self):
         form_data = {
@@ -135,7 +133,7 @@ class RecipeActionFormTest(TestCase):
             "add_to_album": False,
             "add_to_recipe_to_try": True,
         }
-        form = RecipeActionForm(data=form_data)
+        form = ManageRecipeCollectionForm(data=form_data)
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["add_to_history"], True)
         self.assertEqual(form.cleaned_data["add_to_album"], False)
@@ -147,7 +145,7 @@ class AddMainRecipeFormTest(TestCase):
         "title": "Recette de test",
         "category": "dessert"
         }
-        form = AddMainRecipeForm(data=form_data)
+        form = RecipeMainSubForm(data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_title_is_unique(self):
@@ -157,7 +155,7 @@ class AddMainRecipeFormTest(TestCase):
             "title": "Recette de test",
             "category": "entrée",
         }
-        form = AddMainRecipeForm(data=form_data)
+        form = RecipeMainSubForm(data=form_data)
 
         self.assertFalse(form.is_valid())
         self.assertIn("Titre déjà utilisé.", form.errors["title"])
@@ -173,11 +171,11 @@ class AddRecipeCombinedFormTest(TestCase):
         shutil.rmtree(cls.TEMP_MEDIA_ROOT)
         super().tearDownClass()
 
-    def test_form_valid(self):
+    def test_form_valid_data(self):
         with patch("django.conf.settings.MEDIA_ROOT", new=self.TEMP_MEDIA_ROOT):
-            with open("recipe_journal/tests/media/test_image.jpg", "rb") as img_file:
+            with open("recipe_journal/tests/media/image_test.jpg", "rb") as img_file:
                 image = SimpleUploadedFile(
-                    name="test_image.jpg",
+                    name="image_test.jpg",
                     content=img_file.read(),
                     content_type="image/jpeg"
                 )
@@ -188,13 +186,21 @@ class AddRecipeCombinedFormTest(TestCase):
             form_files = {
                 "image": image
             }
-            form = AddRecipeCombinedForm(data=form_data, files=form_files)
+            form = RecipeCombinedForm(data=form_data, files=form_files)
 
             self.assertTrue(form.is_valid())
             recipe = form.save()
 
             self.assertTrue(recipe in Recipe.objects.all())
-            self.assertTrue("test_image.jpg" in recipe.image.name)
+            self.assertTrue("image_test.jpg" in recipe.image.name)
+    
+    def test_form_empty_data(self):
+        form_data = {"title": "", "category": ""}
+        form = RecipeCombinedForm(form_data)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('title', form.main_form.errors)
+        self.assertIn('category', form.main_form.errors)
 
 class AddRecipeIngredientFormTest(TestCase):
     def test_form_valid(self):
@@ -203,7 +209,7 @@ class AddRecipeIngredientFormTest(TestCase):
             "quantity": 1.5,
             "unit": "kg"
         }
-        form = AddRecipeIngredientForm(data=form_data)
+        form = RecipeIngredientForm(data=form_data)
 
         self.assertTrue(form.is_valid())
 
@@ -225,7 +231,7 @@ class AddRecipeIngredientFormTest(TestCase):
             }
         ]
         for form_data in form_data_list:
-            form = AddRecipeIngredientForm(data=form_data)
+            form = RecipeIngredientForm(data=form_data)
             self.assertTrue(form.is_valid())
             form.save()
         
@@ -239,7 +245,7 @@ class AddRecipeActionFormTest(TestCase):
             "add_to_history" : False,
             "add_to_recipe_to_try" : False,
         }
-        form = RecipeActionForm(data=form_data)
+        form = ManageRecipeCollectionForm(data=form_data)
 
         self.assertFalse(form.is_valid())
         self.assertIn("Vous devez cocher au moins une option.", form.non_field_errors())
@@ -250,7 +256,7 @@ class AddRecipeActionFormTest(TestCase):
             "add_to_history" : True,
             "add_to_recipe_to_try" : True,
         }
-        form = RecipeActionForm(data=form_data)
+        form = ManageRecipeCollectionForm(data=form_data)
 
         self.assertTrue(form.is_valid())
 

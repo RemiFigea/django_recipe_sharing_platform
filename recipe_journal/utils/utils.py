@@ -1,11 +1,12 @@
 """Module for managing recipes, forms, and user interactions."""
 
+from django import forms
 from django.contrib import messages
 from django.forms import ValidationError
-from django import forms
+from django.http import JsonResponse
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
-from recipe_journal.forms import  AddFriendForm, AddRecipeIngredientForm, AddRecipeCombinedForm
-from recipe_journal.forms import FilterRecipeCollectionForm, RecipeActionForm, SearchRecipeForm
+from recipe_journal.forms import  AddFriendForm, RecipeIngredientForm, RecipeCombinedForm
+from recipe_journal.forms import FilterRecipeCollectionForm, ManageRecipeCollectionForm, SearchRecipeForm
 import random as rd
 import spacy
 import time
@@ -76,26 +77,27 @@ def validate_title(title):
 
 def get_recipe_ingredient_list(request):
     """
-    Extracts and validates a list of ingredients from a POST request and returns a list of dictionaries.
+    Extracts and validates a list of ingredients from a POST request and returns a list of dictionaries representing the ingredients.
 
     Parameters:
-    - request (HttpRequest): The HTTP request object containing the form data.
+    - request (HttpRequest): The HTTP request object containing the form data, with "name", "quantity", and "unit" fields.
 
     Returns:
-    - list: A list of dictionaries containing ingredient data.
+    - A list of dictionaries, where each dictionary contains "name", "quantity", and "unit" keys representing an ingredient.
     """
     recipe_ingredient_list = []
 
-    if request.POST and "name" in request.POST:
+    if "name" in request.POST:
         name_list = request.POST.getlist("name")
         quantity_list = request.POST.getlist("quantity")
         unit_list = request.POST.getlist("unit")
 
         if len(name_list) != len(quantity_list) or len(quantity_list) != len(unit_list):
-            raise ValueError("List name, quantity and unit are not coherent")
+            return recipe_ingredient_list
 
         recipe_ingredient_list = [{"name": name, "quantity": quantity, "unit": unit} 
-                                for name, quantity, unit in zip(name_list, quantity_list, unit_list)]
+                                  for name, quantity, unit in zip(name_list, quantity_list, unit_list)]
+    
     return recipe_ingredient_list
 
 def get_recipe_ingredient_form_list(recipe_ingredient_list):
@@ -111,13 +113,31 @@ def get_recipe_ingredient_form_list(recipe_ingredient_list):
     recipe_ingredient_form_list = []
 
     for recipe_ingredient in recipe_ingredient_list:
-        recipe_ingredient_form = AddRecipeIngredientForm(data=recipe_ingredient)
-        recipe_ingredient_form_list.append(recipe_ingredient_form)
-    
-    if recipe_ingredient_form_list == []:
-        recipe_ingredient_form_list = [AddRecipeIngredientForm()]
+            recipe_ingredient_form = RecipeIngredientForm(data=recipe_ingredient)
+            recipe_ingredient_form_list.append(recipe_ingredient_form)
+
+    if not recipe_ingredient_form_list:
+        recipe_ingredient_form_list = [RecipeIngredientForm()]
 
     return recipe_ingredient_form_list
+
+def initialize_combined_form(combined_form_class, request):
+    """
+    Initializes and returns a combined form with or without POST data.
+
+    Parameters:
+    - combined_form_class (Form): The combined form class to instantiate.
+    - request (HttpRequest): The HTTP request object containing the POST data.
+
+    Returns:
+    - Form: The initialized combined form instance.
+    """
+    combined_form = combined_form_class()
+    form_fields = list(combined_form.main_form.base_fields) + list(combined_form.secondary_form.base_fields)
+
+    if any(field in request.POST for field in form_fields):
+        return combined_form_class(request.POST, request.FILES)
+    return combined_form_class()
 
 def initialize_form(form_class, request):
     """
@@ -132,31 +152,11 @@ def initialize_form(form_class, request):
     """
     form_field_names = form_class.base_fields.keys()
 
-    if request.POST and any(field in request.POST for field in form_field_names):
+    if any(field in request.POST for field in form_field_names):
         return form_class(request.POST)
     else:
         return form_class()
     
-def initialize_combined_form(combined_form_class, request):
-    """
-    Initializes and returns a combined form with or without POST data.
-
-    Parameters:
-    - combined_form_class (Form): The combined form class to instantiate.
-    - request (HttpRequest): The HTTP request object containing the POST data.
-
-    Returns:
-    - Form: The initialized combined form instance.
-    """
-    combined_form = combined_form_class()
-    main_fields = combined_form.main_form.base_fields.keys()
-    secondary_fields = combined_form.secondary_form.base_fields.keys()
-
-    if request.POST and any(field in request.POST for field in list(main_fields) + list(secondary_fields)):
-        return combined_form_class(request.POST, request.FILES)
-    else:
-        return combined_form_class()
-
 def prepare_recipe_forms(request):
     """
     Initializes and returns the forms and related to the recipe.
@@ -170,8 +170,8 @@ def prepare_recipe_forms(request):
     recipe_ingredient_list = get_recipe_ingredient_list(request)
     recipe_ingredient_form_list = get_recipe_ingredient_form_list(recipe_ingredient_list)
     
-    recipe_form = initialize_combined_form(AddRecipeCombinedForm, request)
-    recipe_action_form = initialize_form(RecipeActionForm, request)
+    recipe_form = initialize_combined_form(RecipeCombinedForm, request)
+    recipe_action_form = initialize_form(ManageRecipeCollectionForm, request)
     
     return recipe_form, recipe_ingredient_form_list, recipe_action_form
 
@@ -275,7 +275,7 @@ def handle_add_friend_request(request, logged_user):
     Returns:
     - form (AddFriendForm): The form object with validation status and error messages, if any.
     """
-    form = AddFriendForm(request.GET, logged_user=logged_user)
+    form = AddFriendForm(request.POST, logged_user=logged_user)
     
     if form.is_valid():
         new_friend_username = form.cleaned_data["username_to_add"]
@@ -322,7 +322,7 @@ def handle_remove_friend_request(request, logged_user):
             messages.error(request, f"L'utilisateur {friend_username} ne fait pas partie de votre liste d'amis.")
     else:
         messages.error(request, "Aucun utilisateur à supprimer.")
-    
+       
 def get_recipe_entries_for_member(collection_model, member):
     """
     Returns the recipes associated with a member for a specific collection model.
@@ -503,3 +503,66 @@ def filter_recipe_collection(request):
         return form, recipe_collection_entries
 
     return None, None
+
+def check_request_validity(request):
+    """ 
+
+    """   
+    logged_user = get_logged_user(request)
+    if not logged_user:
+        return None, None, None, JsonResponse({"message": "Aucun utilisateur connecté."}, status=400)
+
+    recipe_id = request.GET.get("recipe_id")
+    model_name = request.GET.get("model_name")
+
+    if not recipe_id:
+        return None, None, None, JsonResponse({"message": "ID de recette manquant."}, status=400)
+    if not model_name:
+        return None, None, None, JsonResponse({"message": "Modèle de collection manquant."}, status=400)
+
+    model = MODEL_MAP.get(model_name)
+    if not model:
+        return None, None, None, JsonResponse({"message": f"Le modèle '{model_name}' est inconnu."}, status=400)
+
+    return logged_user, recipe_id, model, None
+
+def manage_collection(request, action):
+    """
+    """
+    logged_user, recipe_id, model, request_validity_error = check_request_validity(request)
+    if request_validity_error:
+        return request_validity_error
+
+    try:
+        if action == "add":
+            _, created = model.objects.get_or_create(member=logged_user, recipe_id=recipe_id)
+            message = (
+                f"La recette a été ajoutée à votre {model.title}."
+                if created else
+                f"La recette fait déjà partie de votre {model.title}."
+            )
+        elif action == "remove":
+            count, _ = model.objects.filter(member=logged_user, recipe_id=recipe_id).delete()
+            message = (
+                f"La recette a été supprimée de votre {model.title}."
+                if count > 0 else
+                f"La recette ne fait pas partie de votre {model.title}."
+            )
+        else:
+            return JsonResponse(
+                {
+                    "message": "Une erreur est survenue: 'Action non valide'.",
+                    "error": f"Une erreur est survenue: 'Action non valide'."
+                },
+                status=400
+            )
+
+        return JsonResponse({"message": message})
+    except Exception as e:
+        return JsonResponse(
+            {
+                "message": "Une erreur est survenue.",
+                "error": f"Une erreur est survenue: {str(e) if e else 'Erreur inconnue'}"
+            },
+            status=500
+        )

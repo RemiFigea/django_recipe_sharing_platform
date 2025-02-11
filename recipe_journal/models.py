@@ -10,12 +10,8 @@ Models included:
     - RecipeAlbumEntry: Represents a recipe entry in a member's album.
     - RecipeToTryEntry: Represents a recipe entry in a member's "to try" list.
     - RecipeHistoryEntry: Represents a recipe entry in a member's history.
-    - Comment: Represents a comment made by a member on a recipe.
-    - Rating: Represents a rating given by a member to a recipe (0 to 5 stars).
-    - Tag: Represents a tag used to categorize recipes (e.g., vegetarian, quick).
 """
 from datetime import date
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from recipe_journal.utils.image_utils import compress_image
 
@@ -88,7 +84,7 @@ class Ingredient(models.Model):
 
     Can be used in multiple recipes.
     """   
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
 class BaseRecipeCollectionEntry(models.Model):
     """
@@ -105,7 +101,7 @@ class BaseRecipeCollectionEntry(models.Model):
     # collection_type = models.CharField(max_length=20, choices=COLLECTION_TYPES)
     member = models.ForeignKey('Member', on_delete=models.CASCADE)
     recipe = models.ForeignKey('Recipe', on_delete=models.CASCADE)
-    saving_date = models.DateField(default=date.today)
+    saving_date = models.DateField(default=date.today, null=False, blank=True)
     personal_note = models.TextField(null=True, blank=True)
 
     def get_collection_name(self):
@@ -118,20 +114,19 @@ class RecipeAlbumEntry(BaseRecipeCollectionEntry):
     """
     Represents an entry in a member's recipe album.
     """
-    title = "Album de recettes"
-
+    title = "album de recettes"
 
 class RecipeToTryEntry(BaseRecipeCollectionEntry):
     """
     Represents an entry in a member's list of recipes to try.
     """
-    title = "Recettes à essayer"
+    title = "liste de recettes à essayer"
 
 class RecipeHistoryEntry(BaseRecipeCollectionEntry):
     """
     Represents an entry in a member's recipe history.
     """
-    title = "Historique de recettes"
+    title = "historique de recettes"
 
 class Comment(models.Model):
     """

@@ -39,9 +39,9 @@ class RecipeModelTest(TestCase):
     
     def test_image_compressed_only_one_time(self):
         with patch("django.conf.settings.MEDIA_ROOT", new=self.TEMP_MEDIA_ROOT):
-            with open("recipe_journal/tests/media/test_image.jpg", "rb") as img_file:
+            with open("recipe_journal/tests/media/image_test.jpg", "rb") as img_file:
                 image = SimpleUploadedFile(
-                    name="test_image.jpg",
+                    name="image_test.jpg",
                     content=img_file.read(),
                     content_type="image/jpeg"
                 )
@@ -61,7 +61,7 @@ class RecipeModelTest(TestCase):
                 )
 
             self.assertTrue(recipe in Recipe.objects.all())
-            self.assertTrue("test_image.jpg" in recipe.image.name)
+            self.assertTrue("image_test.jpg" in recipe.image.name)
 
             recipe.image = image
             recipe.save()
@@ -73,7 +73,40 @@ class RecipeModelTest(TestCase):
                 "L'image ne devrait pas avoir été compressée à nouveau."
                 )
 
+class IngredientModelTest(TestCase):
+    def test_create_ingredient(self):
+        ingredient = Ingredient.objects.create(name="Sugar")
 
+        self.assertTrue(ingredient.name == "Sugar")
 
+    def test_create_ingredient_unique(self):
+        Ingredient.objects.create(name="Sugar")
+        
+        with self.assertRaises(IntegrityError):
+            Ingredient.objects.create(name="Sugar")
 
+class RecipeIngredientModelTest(TestCase):
+    def setUp(self):
+        Ingredient.objects.create(name="Flour")
+
+    def test_create_recipe_ingredient(self):
+        ingredient = Ingredient.objects.get(name="Flour")
+        recipe_ingredient = RecipeIngredient.objects.create(
+            ingredient=ingredient, quantity=2.5, unit="cups"
+        )
+
+        self.assertTrue(recipe_ingredient.ingredient.name == "Flour")
+        self.assertTrue(recipe_ingredient.quantity == 2.5)
+        self.assertTrue(recipe_ingredient.unit == "cups")
+    
+    def test_cascade_delete(self):
+        ingredient = Ingredient.objects.get(name="Flour")
+        RecipeIngredient.objects.create(
+            ingredient=ingredient, quantity=2.5, unit="cups"
+        )
+
+        self.assertTrue(len(RecipeIngredient.objects.all()) == 1)
+
+        Ingredient.objects.filter(name="Flour").delete()
+        self.assertTrue(len(RecipeIngredient.objects.all()) == 0)
         

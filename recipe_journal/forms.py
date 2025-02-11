@@ -152,7 +152,7 @@ class ModifyProfileForm(forms.ModelForm):
 
         return member
 
-class AddMainRecipeForm(forms.ModelForm):
+class RecipeMainSubForm(forms.ModelForm):
     """
     Form to add the main details of a recipe, including title, category, source, 
     URL, and content. Ensures the recipe title is unique to avoid duplication.
@@ -193,7 +193,7 @@ class AddMainRecipeForm(forms.ModelForm):
             
         return title
 
-class AddSecondaryRecipeForm(forms.ModelForm):
+class RecipeSecondarySubForm(forms.ModelForm):
     """
     Form to add secondary details of a recipe, such as cooking time, preparation time, 
     resting time, and a short description.
@@ -215,7 +215,7 @@ class AddSecondaryRecipeForm(forms.ModelForm):
             "short_description": "courte présentation",
         }
 
-class AddRecipeCombinedForm(forms.Form):
+class RecipeCombinedForm(forms.Form):
     """
     A combined form for adding a recipe with both main and secondary information.
     This form includes:
@@ -226,13 +226,16 @@ class AddRecipeCombinedForm(forms.Form):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.main_form = AddMainRecipeForm(*args, **kwargs)
-        self.secondary_form = AddSecondaryRecipeForm(*args, **kwargs)
+        self.main_form = RecipeMainSubForm(*args, **kwargs)
+        self.secondary_form = RecipeSecondarySubForm(*args, **kwargs)
 
     def is_valid(self):
-        return self.main_form.is_valid() and self.secondary_form.is_valid()
+        main_valid = self.main_form.is_valid()
+        secondary_valid = self.secondary_form.is_valid()
 
-    def cleaned_data(self):
+        return main_valid and secondary_valid
+
+    def clean(self):
         return {
             "main_form": self.main_form.cleaned_data,
             "secondary_form": self.secondary_form.cleaned_data,
@@ -268,7 +271,7 @@ class AddRecipeCombinedForm(forms.Form):
         recipe.save()
         return recipe
 
-class AddRecipeIngredientForm(forms.ModelForm):
+class RecipeIngredientForm(forms.ModelForm):
     """
     Form to add ingredients to a recipe. 
     Ensures that the ingredient exists in the database or creates it if necessary.
@@ -311,7 +314,7 @@ class AddRecipeIngredientForm(forms.ModelForm):
 
         return instance
     
-class RecipeActionForm(forms.Form):
+class ManageRecipeCollectionForm(forms.Form):
     """
     Form to manage the actions of adding a recipe to various collections 
     (album, history, to-try list).
@@ -385,7 +388,7 @@ class AddFriendForm(forms.Form):
 
         return cleaned_data
 
-class AddRecipeHistoryForm(forms.ModelForm):
+class CreateRecipeHistoryForm(forms.ModelForm):
     class Meta:
         model = RecipeHistoryEntry
         fields = ["member", "recipe", "saving_date", "personal_note"]
@@ -405,28 +408,42 @@ class AddRecipeHistoryForm(forms.ModelForm):
         
         return cleaned_data
 
-class RemoveRecipeHistoryForm(forms.Form):
+class DeleteRecipeHistoryForm(forms.Form):
     def __init__(self, *args, member=None, recipe=None, **kwargs):
         
         super().__init__(*args, **kwargs)
-        
+        self.member = member
+        self.recipe = recipe
+        self.date_choices = []
+
         if member and recipe:
             queryset = RecipeHistoryEntry.objects.filter(member=member, recipe=recipe)
             dates = queryset.values_list("saving_date", flat=True).distinct()
 
-            date_choices = [(date, date.strftime("%Y-%m-%d")) for date in dates]
+            self.date_choices = [(date, date.strftime("%Y-%m-%d")) for date in dates]
 
-            self.fields["recipe_history_entry_date"] = forms.DateField(
-                widget=forms.Select(choices=date_choices),
-                label="Choisir une date",
-                required=True
-            )
-        else:
-            self.fields["recipe_history_entry_date"] = forms.DateField(
-                widget=forms.Select(choices=[]),
-                label="Choisir une date",
-                required=True
-            )
+        self.fields["recipe_history_entry_date"] = forms.DateField(
+            widget=forms.Select(choices=self.date_choices),
+            label="Choisir une date",
+            required=True
+        )
+    
+    def clean_recipe_history_entry_date(self):
+        recipe_history_entry_date = self.cleaned_data.get("recipe_history_entry_date")
+
+        if recipe_history_entry_date and self.member and self.recipe:
+            if RecipeHistoryEntry.objects.filter(
+                member=self.member,
+                recipe=self.recipe,
+                saving_date=recipe_history_entry_date
+                ).exists():
+
+                return recipe_history_entry_date
+            
+            else:
+                raise forms.ValidationError("La recette ne fait pas partie de l'historique à cette date.")
+
+
 
 class SearchRecipeForm(forms.Form):
     collection_choices = [

@@ -10,7 +10,7 @@
             My Recipe Journal - {% block title %}Bienvenue{% endblock %}
         </title>
     </head>
-    <body id="{% block bodyId %}genericPage{% endblock %}">
+    <body id="{% block bodyId %}generic-page{% endblock %}">
         <header>
             {% block headerContent %}
             <h1>My Recipe Journal</h1>
@@ -37,7 +37,12 @@
                     </div>
                     {% endif %}
                 </li>
-                <li><a class="header-link" href="add-recipe">Editer une recette</a></li>
+                <li>
+                    <form method="post" action="add-recipe">
+                        {% csrf_token %}
+                        <input  class="header-link"  type="submit" value="Editer une recette">
+                    </form>
+                </li>
                 <li>
                     <form method="post" action="show-recipe-collection">
                         {% csrf_token %}

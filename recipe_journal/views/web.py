@@ -17,6 +17,7 @@ Views included:
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_http_methods
 from recipe_journal.forms import LoginForm, AddFriendForm, ModifyProfileForm
 from recipe_journal.forms import RegistrationForm, SearchRecipeForm
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
@@ -105,6 +106,7 @@ def welcome(request):
     }
     return render(request, "welcome.html", context)
 
+@require_http_methods(["POST"])
 def add_recipe(request):
     """
     Handles adding a new recipe by validating forms, saving the recipe and ingredients, 
@@ -146,8 +148,8 @@ def show_recipe(request):
     """
     logged_user = ut.get_logged_user(request)
 
-    if request.method == "GET" and "recipeId" in request.GET:
-        recipe_id = request.GET["recipeId"]
+    if request.method == "GET" and "recipe-id" in request.GET:
+        recipe_id = request.GET["recipe-id"]
         result = Recipe.objects.filter(id = recipe_id)
         if len(result) == 1:
             recipe = Recipe.objects.get(id = recipe_id)
@@ -158,7 +160,7 @@ def show_recipe(request):
             }
             return render(request, "show_recipe.html", context)
     
-    return render(request, "welcome.html", {"logged_user": logged_user, })
+    return redirect("/welcome")
 
 def show_friends(request):
     """Displays the logged-in user's friend list and handles adding or removing friends."""
@@ -168,7 +170,7 @@ def show_friends(request):
 
     form = AddFriendForm(logged_user=logged_user)
 
-    if request.method == "GET" and "username_to_add" in request.GET:
+    if request.method == "POST" and "username_to_add" in request.POST:
         form = ut.handle_add_friend_request(request, logged_user)
 
     elif request.method == "POST" and "username_to_remove" in request.POST:
@@ -197,8 +199,8 @@ def show_recipe_collection(request):
         return redirect("/welcome")
 
     form_html = render_to_string("partials/form_filter_recipe_collection.html", {"form": form}, request=request)
-    member = form.cleaned_data.get("member")
-    collection_name = form.cleaned_data.get("collection")
+    member = getattr(form, "cleaned_data", {}).get("member", None)
+    collection_name = getattr(form, "cleaned_data", {}).get("collection", None)
     collection_model = MODEL_MAP.get(collection_name)
     
     context = {
@@ -226,12 +228,14 @@ def search_recipe(request):
        
     form_html = render_to_string("partials/form_search_recipe.html", {"form": form}, request=request)
 
+    
     context = {
     "logged_user": logged_user,
     "thumbnail_recipes": recipe_entries,
     "form": form_html,
     "MEDIA_URL": settings.MEDIA_URL,
     }
+
     return render(request, "search_recipe.html", context)
 
 

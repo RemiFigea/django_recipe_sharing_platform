@@ -8,7 +8,7 @@
 {% endblock %}
 {% block title %}Accueil{% endblock %}
 
-{% block bodyId %}homePage{% endblock %}
+{% block bodyId %}welcome-page{% endblock %}
 
 {% block content %}
 <div class="section-title">
@@ -26,7 +26,7 @@
     <div class="recipe-content">
         <div class="img-placeholder"><img class="recipe-img" src="{{ MEDIA_URL }}{{ recipe.image }}" alt="{{ recipe.title }}"></div>
         <div class="recipe-description">
-            <h2><a href="show-recipe?recipeId={{ recipe.id }}">{{ recipe.title }}</a></h2>
+            <h2><a href="show-recipe?recipe-id={{ recipe.id }}">{{ recipe.title }}</a></h2>
             <p class="source"><strong>Source:</strong> {{ recipe.source }}</p>
             <p>{{ entry.recipe.short_description }}</p>
             <div class="recipe-metrix">

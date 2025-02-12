@@ -176,8 +176,8 @@ class RemoveRecipeHistoryTest(TestCase):
     
     def test_remove_recipe_history_date_invalid(self):
         form_data = {
-            "member": self.member.id,
-            "recipe": self.recipe.id,
+            "member_id": self.member.id,
+            "recipe_id": self.recipe.id,
             "recipe_history_entry_date": date.today()
             }
         response = self.client.post(reverse("remove_recipe_history"), form_data)
@@ -198,8 +198,8 @@ class RemoveRecipeHistoryTest(TestCase):
         )
 
         form_data = {
-            "member": self.member.id,
-            "recipe": self.recipe.id,
+            "member_id": self.member.id,
+            "recipe_id": self.recipe.id,
             "recipe_history_entry_date": date.today()
             }
         response = self.client.post(reverse("remove_recipe_history"), form_data)

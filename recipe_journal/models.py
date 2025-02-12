@@ -128,14 +128,4 @@ class RecipeHistoryEntry(BaseRecipeCollectionEntry):
     """
     title = "historique de recettes"
 
-class Comment(models.Model):
-    """
-    Represents a comment by a member on a recipe.
-
-    Includes the comment content and publication date.
-    """
-    author = models.ForeignKey("Member", on_delete=models.PROTECT)
-    recipe = models.ForeignKey("Recipe", on_delete=models.CASCADE)
-    content = models.TextField()
-    publication_date = models.DateField()
 

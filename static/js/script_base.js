@@ -3,11 +3,13 @@ async function fetchData(url, method = "GET", body = null) {
         const options = {
             method,
             headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
                 "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value,
             },
         };
         if (body) {
-            options.body = body;
+            const formData = new URLSearchParams(body);
+            options.body = formData.toString();  // Transforme l'objet en chaîne URL encodée
         }
 
         const response = await fetch(url, options);

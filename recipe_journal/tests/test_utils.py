@@ -2,10 +2,12 @@
 Unit tests for the functions contained in the module utils.py.
 """
 from django.contrib.auth.hashers import make_password
+from django.contrib.messages import get_messages
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import RequestFactory, TestCase
 import json
-from recipe_journal.forms import RecipeCombinedForm, ManageRecipeCollectionForm
-from recipe_journal.models import Ingredient, Member, Recipe
+from recipe_journal.forms import  AddFriendForm, ManageCollectionForm, RecipeCombinedForm, RecipeIngredientForm
+from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
 from recipe_journal.utils.utils import *
 from recipe_journal.utils import utils
@@ -176,7 +178,7 @@ class InitializeFormTest(TestCase):
     
     def test_initialize_form_valid_data(self):
         self.request = self.factory.post("/", {"add_to_album": True})
-        form = initialize_form(ManageRecipeCollectionForm, self.request)
+        form = initialize_form(ManageCollectionForm, self.request)
 
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["add_to_album"], True)
@@ -376,6 +378,217 @@ class AreFormsValidTest(TestCase):
 
     def test_are_forms_valid_False(self):
         self.assertFalse(are_forms_valid(self.mock_form_invalid, self.mock_form_invalid))
+
+class SaveRecipeAndIngredientsTest(TestCase):
+    def setUp(self):
+        recipe_form_data = {
+            "title": "recette test",
+            "category": "dessert"
+        }
+        recipe_ingredient_form_data = {
+            "name": "ingredient test",
+            "quantity": 2,
+            "unit": "kg"
+        }
+        self.recipe_form = RecipeCombinedForm(recipe_form_data)
+        self.recipe_ingredient_form_list = [RecipeIngredientForm(recipe_ingredient_form_data)]
+        self.recipe_form.is_valid()
+        self.recipe_ingredient_form_list[0].is_valid()
+    
+    def test_save_recipe_and_ingredients(self):
+        recipe = save_recipe_and_ingredients(self.recipe_form, self.recipe_ingredient_form_list)
+        self.assertIn(recipe, Recipe.objects.all())
+
+class AddRecipeCollectionIfCheckedTest(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(username="test_user", password="password")
+        self.recipe = Recipe.objects.create(title="recette test", category="plat")
+
+    def _test_add_recipe_to_collection_if_checked(self, manage_collection_form_data):
+        manage_collection_form = ManageCollectionForm(manage_collection_form_data)
+        manage_collection_form.is_valid()
+        
+        for model, action in ManageCollectionForm.MODEL_ACTION_MAPPING.items():
+            if manage_collection_form_data.get(action)==True:
+                self.assertTrue(
+                    add_recipe_to_collection_if_checked(
+                        manage_collection_form,
+                        model,
+                        self.member,
+                        self.recipe
+                    )
+                )             
+                self.assertTrue(model.objects.filter(member=self.member, recipe=self.recipe).exists())
+            else:
+                self.assertFalse(
+                    add_recipe_to_collection_if_checked(
+                        manage_collection_form,
+                        model,
+                        self.member,
+                        self.recipe
+                    )
+                )
+                self.assertFalse(model.objects.filter(member=self.member, recipe=self.recipe).exists())
+
+    def test_add_recipe_to_collection_if_checked_case1(self):
+        manage_collection_form_data = {"add_to_history": True}
+        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+    
+    def test_add_recipe_to_collection_if_checked_case2(self):
+        manage_collection_form_data = {
+            "add_to_history": True,
+            "add_to_album": True
+            }
+        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+    
+    def test_add_recipe_to_collection_if_checked_case3(self):
+        manage_collection_form_data = {
+            }
+        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+    
+    def test_add_recipe_to_collection_if_checked_case4(self):
+        manage_collection_form_data = {
+            "add_to_history": True,
+            "add_to_album": True,
+            "add_to_recipe_to_try": True,
+            }
+        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+
+class HandleRecipeCQollectionsTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.request = self.factory.post("/")
+        setattr(self.request, "session", {})
+        setattr(self.request, "_messages", FallbackStorage(self.request))
+    
+    def mock_add_recipe_to_album(self, manage_recipe_collection_form, model, logged_user, recipe):
+        if model == RecipeAlbumEntry:
+            return True
+        return False
+    
+    @patch.object(utils, path.ADD_RECIPE_TO_COLLECTION_IF_CHECKED)
+    def test_handle_recipe_collections_add_to_album(self, mock_add_recipe_to_collection_if_checked):
+        mock_add_recipe_to_collection_if_checked.side_effect = self.mock_add_recipe_to_album
+        mock_manage_recipe_collection_form = "mock_manage_recipe_collection_form"
+        mock_logged_user = "mock_logged_user"
+        mock_recipe = "mock_recipe"
+        handle_recipe_collections(
+            mock_manage_recipe_collection_form,
+            mock_logged_user,
+            mock_recipe,
+            self.request
+            )
+
+        messages_list = list(get_messages(self.request))
+        self.assertEqual(len(messages_list), 1)
+        self.assertTrue(f"Recette ajoutée à votre {RecipeAlbumEntry.title}" in messages_list[0].message)
+
+    @patch.object(utils, path.ADD_RECIPE_TO_COLLECTION_IF_CHECKED)
+    def test_handle_recipe_collections_add_to_all_collection(self, mock_add_recipe_to_collection_if_checked):
+        mock_add_recipe_to_collection_if_checked.return_value = True
+        mock_manage_recipe_collection_form = "mock_manage_recipe_collection_form"
+        mock_logged_user = "mock_logged_user"
+        mock_recipe = "mock_recipe"
+        handle_recipe_collections(
+            mock_manage_recipe_collection_form,
+            mock_logged_user,
+            mock_recipe,
+            self.request
+            )
+
+        messages_list = list(get_messages(self.request))
+        self.assertEqual(len(messages_list), len(MODEL_MAP))
+        for model in MODEL_MAP.values():
+            self.assertTrue(any(f"Recette ajoutée à votre {model.title}" in message.message for message in messages_list))
+    
+    @patch.object(utils, path.ADD_RECIPE_TO_COLLECTION_IF_CHECKED)
+    def test_handle_recipe_collections_no_add(self, mock_add_recipe_to_collection_if_checked):
+        mock_add_recipe_to_collection_if_checked.return_value = False
+        mock_manage_recipe_collection_form = "mock_manage_recipe_collection_form"
+        mock_logged_user = "mock_logged_user"
+        mock_recipe = "mock_recipe"
+        handle_recipe_collections(
+            mock_manage_recipe_collection_form,
+            mock_logged_user,
+            mock_recipe,
+            self.request
+            )
+
+        self.assertEqual(len(get_messages(self.request)), 0)
+
+class HandleAddFriendRequestTest(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(username="test_user", password="password")
+        self.friend  = Member.objects.create(username="test_friend", password="password")
+        self.factory = RequestFactory()
+        
+    def test_handle_add_friend_request_form_invalid(self):
+        self.request = self.factory.post("/")
+        setattr(self.request, "session", {})
+        setattr(self.request, "_messages", FallbackStorage(self.request))
+        form = handle_add_friend_request(self.request, self.member)
+        
+        self.assertEqual(len(get_messages(self.request)), 0)
+        self.assertFalse(form.is_valid())
+        self.assertIn("username_to_add", form.fields)
+    
+    def test_handle_add_friend_request_form_valid(self):
+        self.request = self.factory.post("/", {"username_to_add": "test_friend"})
+        setattr(self.request, "session", {})
+        setattr(self.request, "_messages", FallbackStorage(self.request))
+        form = handle_add_friend_request(self.request, self.member)
+        messages_list = list(get_messages(self.request))
+
+        self.assertTrue(form.is_valid())
+        self.assertEqual(len(messages_list), 1)
+        self.assertEqual(f"Nous avons ajouté test_friend à votre liste d'amis !", messages_list[0].message)
+        self.assertIn(self.friend, self.member.friends.all())
+    
+class HandleRemoveFriendRequestTest(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(username="test_user", password="password")
+        self.friend  = Member.objects.create(username="test_friend", password="password")
+        self.factory = RequestFactory()
+    
+    def test_handle_remove_friend_request_username_to_remove_empty(self):
+        self.request = self.factory.post("/", {"username_to_remove": ""})
+        setattr(self.request, "session", {})
+        setattr(self.request, "_messages", FallbackStorage(self.request))
+        handle_remove_friend_request(self.request, self.member)
+        messages_list = list(get_messages(self.request))
+
+        self.assertEqual(len(messages_list), 1)
+        self.assertEqual("Aucun utilisateur à supprimer.", messages_list[0].message)
+    
+    def test_handle_remove_friend_request_success(self):
+        self.member.friends.add(self.friend)
+        self.request = self.factory.post("/", {"username_to_remove": "test_friend"})
+        setattr(self.request, "session", {})
+        setattr(self.request, "_messages", FallbackStorage(self.request))
+
+        self.assertIn(self.friend, self.member.friends.all())
+        
+        handle_remove_friend_request(self.request, self.member)
+        messages_list = list(get_messages(self.request))
+
+        self.assertEqual(len(messages_list), 1)
+        self.assertEqual("L'utilisateur test_friend a été retiré de votre liste d'amis.", messages_list[0].message)
+        self.assertNotIn(self.friend, self.member.friends.all())
+    
+    def test_handle_remove_friend_request_friend_not_valid(self):
+        self.request = self.factory.post("/", {"username_to_remove": "test_friend"})
+        setattr(self.request, "session", {})
+        setattr(self.request, "_messages", FallbackStorage(self.request))       
+        handle_remove_friend_request(self.request, self.member)
+        messages_list = list(get_messages(self.request))
+
+        self.assertEqual(len(messages_list), 1)
+        self.assertEqual("L'utilisateur test_friend ne fait pas partie de votre liste d'amis.", messages_list[0].message)
+        self.assertNotIn(self.friend, self.member.friends.all())
+
+
+
+
 
 
 

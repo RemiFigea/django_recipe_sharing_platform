@@ -6,7 +6,7 @@ from django.forms import ValidationError
 from django.http import JsonResponse
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
 from recipe_journal.forms import  AddFriendForm, RecipeIngredientForm, RecipeCombinedForm
-from recipe_journal.forms import FilterRecipeCollectionForm, ManageRecipeCollectionForm, SearchRecipeForm
+from recipe_journal.forms import FilterRecipeCollectionForm, ManageCollectionForm, SearchRecipeForm
 import random as rd
 import spacy
 import time
@@ -171,9 +171,9 @@ def prepare_recipe_forms(request):
     recipe_ingredient_form_list = get_recipe_ingredient_form_list(recipe_ingredient_list)
     
     recipe_form = initialize_combined_form(RecipeCombinedForm, request)
-    recipe_action_form = initialize_form(ManageRecipeCollectionForm, request)
+    manage_recipe_collection_form = initialize_form(ManageCollectionForm, request)
     
-    return recipe_form, recipe_ingredient_form_list, recipe_action_form
+    return recipe_form, recipe_ingredient_form_list, manage_recipe_collection_form
 
 def are_forms_valid(*forms):
     """
@@ -187,7 +187,7 @@ def are_forms_valid(*forms):
     """
     return all(form.is_valid() for form in forms)
 
-def save_recipe_with_ingredients(recipe_form, recipe_ingredient_form_list):
+def save_recipe_and_ingredients(recipe_form, recipe_ingredient_form_list):
     """
     Saves a recipe and its associated ingredients.
 
@@ -205,36 +205,23 @@ def save_recipe_with_ingredients(recipe_form, recipe_ingredient_form_list):
     return recipe
 
 def add_recipe_to_collection_if_checked(
-        recipe_form,
-        collection_model,
-        collection_field,
+        manage_recipe_collection_form,
+        model,
         logged_user,
         recipe
         ):
     """
-    Adds a recipe to a collection if the user has selected to do so via the form.
-
-    Parameters:
-    - recipe_form (Form): The recipe form.
-    - collection_model (Model): The collection model to add the recipe to.
-    - collection_field (str): The form field name for adding to the collection.
-    - logged_user (Member): The logged-in user.
-    - recipe (Recipe): The recipe to add to the collection.
-
-    Returns:
-    - bool: True if the recipe was added to the collection, False otherwise.
     """
-
-    add_to_collection = recipe_form.cleaned_data.get(collection_field, False)
+    add_to_collection = manage_recipe_collection_form.cleaned_data.get(ManageCollectionForm.MODEL_ACTION_MAPPING[model], False)
 
     if add_to_collection:
-        collection_instance = collection_model(member=logged_user, recipe=recipe)
-        collection_instance.save()
+        recipe_collection_instance = model(member=logged_user, recipe=recipe)
+        recipe_collection_instance.save()
         return True
     else:
         return False
 
-def handle_recipe_collections(recipe_action_form, logged_user, recipe, request):
+def handle_recipe_collections(manage_recipe_collection_form, logged_user, recipe, request):
     """
     Handles adding the recipe to the user's collections if selected in the form.
 
@@ -247,21 +234,15 @@ def handle_recipe_collections(recipe_action_form, logged_user, recipe, request):
     Returns:
     - None
     """
-    collections = [
-        (RecipeHistoryEntry, "add_to_history", "Recette ajoutée à l'historique de vos recettes"),
-        (RecipeAlbumEntry, "add_to_album", "Recette ajoutée à votre album de recette"),
-        (RecipeToTryEntry, "add_to_recipe_to_try", "Recette ajoutée à la liste de vos recettes à tester"),
-    ]
-
-    for collection_model, collection_field, success_message in collections:
+    for model in MODEL_MAP.values():
         added = add_recipe_to_collection_if_checked(
-            recipe_action_form,
-            collection_model,
-            collection_field,
+            manage_recipe_collection_form,
+            model,
             logged_user,
             recipe,
         )
         if added:
+            success_message = f"Recette ajoutée à votre {model.title}"
             messages.success(request, success_message)    
 
 def handle_add_friend_request(request, logged_user):
@@ -279,19 +260,12 @@ def handle_add_friend_request(request, logged_user):
     
     if form.is_valid():
         new_friend_username = form.cleaned_data["username_to_add"]
-        
-        try:
-            new_friend = Member.objects.get(username=new_friend_username)
-            logged_user.friends.add(new_friend)
-            logged_user.save()
-            messages.success(request, f"Nous avons ajouté {new_friend_username} à votre liste d'amis !")
-        
-        except Member.DoesNotExist:
-            messages.error(request, f"Nous n'avons pas trouvé l'utilisateur {new_friend_username}. Veuillez vérifier son nom d'utilisateur.")
-        
-        except Exception as e:
-            messages.error(request, f"Impossible d'ajouter {new_friend_username} à vos amis.")
-    
+        new_friend = Member.objects.get(username=new_friend_username)
+
+        logged_user.friends.add(new_friend)
+        logged_user.save()
+        messages.success(request, f"Nous avons ajouté {new_friend_username} à votre liste d'amis !")
+       
     return form
 
 def handle_remove_friend_request(request, logged_user):
@@ -311,13 +285,9 @@ def handle_remove_friend_request(request, logged_user):
         friend = logged_user.friends.filter(username=friend_username).first()
         
         if friend:
-            try:
-                logged_user.friends.remove(friend)
-                logged_user.save()
-                messages.success(request, f"L'utilisateur {friend_username} a été retiré de votre liste d'amis.")
-
-            except Exception as e:
-                messages.error(request, f"Une erreur s'est produite lors de la suppression de {friend_username}.")
+            logged_user.friends.remove(friend)
+            logged_user.save()
+            messages.success(request, f"L'utilisateur {friend_username} a été retiré de votre liste d'amis.")
         else:
             messages.error(request, f"L'utilisateur {friend_username} ne fait pas partie de votre liste d'amis.")
     else:
@@ -512,8 +482,8 @@ def check_request_validity(request):
     if not logged_user:
         return None, None, None, JsonResponse({"message": "Aucun utilisateur connecté."}, status=400)
 
-    recipe_id = request.GET.get("recipe_id")
-    model_name = request.GET.get("model_name")
+    recipe_id = request.POST.get("recipe_id")
+    model_name = request.POST.get("model_name")
 
     if not recipe_id:
         return None, None, None, JsonResponse({"message": "ID de recette manquant."}, status=400)
@@ -525,7 +495,7 @@ def check_request_validity(request):
         return None, None, None, JsonResponse({"message": f"Le modèle '{model_name}' est inconnu."}, status=400)
 
     return logged_user, recipe_id, model, None
-
+ 
 def manage_collection(request, action):
     """
     """

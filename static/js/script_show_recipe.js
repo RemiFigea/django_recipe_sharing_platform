@@ -13,9 +13,10 @@ async function updateCollectionButton(dropdown, recipeId) {
         recipe_id: recipeId,
         model_name: modelName
     };
+    
 
     try {
-        const data = await fetchData(url, "POST", JSON.stringify(requestData));
+        const data = await fetchData("api/check-collection-status", "POST", requestData);
         
         if (!data) return;
 
@@ -69,7 +70,7 @@ async function handleCollectionUpdate(event, url) {
         };
 
         try {
-            const data = await fetchData(url, "POST", JSON.stringify(requestData));
+            const data = await fetchData(url, "POST", requestData);
 
             if (!data) return;
 
@@ -93,7 +94,7 @@ function handleResponse(data, modal) {
     const succesMsg = modal.querySelector(".success-message");
     const errorMsg = modal.querySelector(".error-message");
 
-    if (modal.id === "remove-recipe-history-modal") {
+    if (modal.id === "modal-remove-recipe-history") {
         insertRemoveRecipeHistoryForm(data, modal);
     };
 
@@ -136,7 +137,7 @@ function setupModal(modalId, openBtnId, formId, apiUrl, calendar) {
     openBtn.onclick = function() {
         modal.classList.add("show");
         resetMessages(modal);
-        if (modalId === "remove-recipe-history-modal") {
+        if (modalId === "modal-remove-recipe-history") {
 
 
             const formContainer = modal.querySelector("#select-date-to-remove");
@@ -167,7 +168,7 @@ function setupModal(modalId, openBtnId, formId, apiUrl, calendar) {
     form.addEventListener("submit", async function(event) {
         event.preventDefault();
 
-        let formData = new FormData(this);
+        let formData = new FormData(form);
 
         try {
             const data = await fetchData(apiUrl, "POST", formData)

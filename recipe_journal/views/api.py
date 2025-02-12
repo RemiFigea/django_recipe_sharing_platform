@@ -111,8 +111,8 @@ def remove_recipe_history(request):
     Returns:
     - JsonResponse: A response indicating success or failure, with updated form HTML if applicable.
     """
-    member = get_object_or_404(Member, id=request.POST.get("member"))
-    recipe = get_object_or_404(Recipe, id=request.POST.get("recipe"))
+    member = get_object_or_404(Member, id=request.POST.get("member_id"))
+    recipe = get_object_or_404(Recipe, id=request.POST.get("recipe_id"))
 
     form = DeleteRecipeHistoryForm(request.POST, member=member, recipe=recipe)
 

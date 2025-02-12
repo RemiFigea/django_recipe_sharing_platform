@@ -18,7 +18,7 @@ Forms included:
 """
 from django.contrib.auth.hashers import check_password, make_password
 from django import forms
-from recipe_journal.models import Ingredient, Member, Recipe, RecipeHistoryEntry, RecipeIngredient
+from recipe_journal.models import Ingredient, Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeIngredient, RecipeToTryEntry
 
 class LoginForm(forms.Form):
     """
@@ -314,12 +314,18 @@ class RecipeIngredientForm(forms.ModelForm):
 
         return instance
     
-class ManageRecipeCollectionForm(forms.Form):
+class ManageCollectionForm(forms.Form):
     """
     Form to manage the actions of adding a recipe to various collections 
     (album, history, to-try list).
     Ensures that at least one collection is selected by the user.
     """
+    MODEL_ACTION_MAPPING = {
+        RecipeAlbumEntry: "add_to_album",
+        RecipeHistoryEntry: "add_to_history",
+        RecipeToTryEntry: "add_to_recipe_to_try"        
+    }
+
     add_to_album = forms.BooleanField(
         required= False,
         initial= True,
@@ -371,7 +377,7 @@ class AddFriendForm(forms.Form):
         self.logged_user = logged_user
         super().__init__(*args, **kwargs)
 
-    def clean(self):
+    def clean_username_to_add(self):
         """
         Validates that the username exists and is not already a friend of the logged-in user.
         """
@@ -386,7 +392,7 @@ class AddFriendForm(forms.Form):
         if self.logged_user and self.logged_user.friends.filter(id=friend.id).exists():
             raise forms.ValidationError(f"'{username_to_add}' fait déjà partie de vos amis.")
 
-        return cleaned_data
+        return username_to_add
 
 class CreateRecipeHistoryForm(forms.ModelForm):
     class Meta:
@@ -410,7 +416,6 @@ class CreateRecipeHistoryForm(forms.ModelForm):
 
 class DeleteRecipeHistoryForm(forms.Form):
     def __init__(self, *args, member=None, recipe=None, **kwargs):
-        
         super().__init__(*args, **kwargs)
         self.member = member
         self.recipe = recipe
@@ -419,31 +424,13 @@ class DeleteRecipeHistoryForm(forms.Form):
         if member and recipe:
             queryset = RecipeHistoryEntry.objects.filter(member=member, recipe=recipe)
             dates = queryset.values_list("saving_date", flat=True).distinct()
-
             self.date_choices = [(date, date.strftime("%Y-%m-%d")) for date in dates]
 
-        self.fields["recipe_history_entry_date"] = forms.DateField(
-            widget=forms.Select(choices=self.date_choices),
+        self.fields["recipe_history_entry_date"] = forms.ChoiceField(
+            choices=self.date_choices,
             label="Choisir une date",
             required=True
         )
-    
-    def clean_recipe_history_entry_date(self):
-        recipe_history_entry_date = self.cleaned_data.get("recipe_history_entry_date")
-
-        if recipe_history_entry_date and self.member and self.recipe:
-            if RecipeHistoryEntry.objects.filter(
-                member=self.member,
-                recipe=self.recipe,
-                saving_date=recipe_history_entry_date
-                ).exists():
-
-                return recipe_history_entry_date
-            
-            else:
-                raise forms.ValidationError("La recette ne fait pas partie de l'historique à cette date.")
-
-
 
 class SearchRecipeForm(forms.Form):
     collection_choices = [

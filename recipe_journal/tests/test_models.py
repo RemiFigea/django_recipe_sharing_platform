@@ -11,6 +11,13 @@ import shutil
 import tempfile
 from unittest.mock import patch
 
+MODEL_MAP = {
+        "RecipeAlbumEntry": RecipeAlbumEntry,
+        "RecipeToTryEntry": RecipeToTryEntry,
+        "RecipeHistoryEntry": RecipeHistoryEntry
+    }
+
+
 class MemberModelTest(TestCase):
     def test_username_unique(self):
         Member.objects.create(username="testuser", password=make_password("password123"))
@@ -110,3 +117,57 @@ class RecipeIngredientModelTest(TestCase):
         Ingredient.objects.filter(name="Flour").delete()
         self.assertTrue(len(RecipeIngredient.objects.all()) == 0)
         
+class IngredientModelTest(TestCase):
+    def test_create_ingredient(self):
+        Ingredient.objects.create(name="jambon")
+
+        self.assertTrue(Ingredient.objects.filter(name="jambon").exists())
+    
+    def test_create_ingredient_duplicated(self):
+        Ingredient.objects.create(name="jambon")
+
+        with self.assertRaises(IntegrityError):
+            Ingredient.objects.create(name="jambon")
+
+class BaseRecipeCollectionModelTest(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(username="testuser", password=make_password("password123"))
+        self.recipe = Recipe.objects.create(title="recipe_title", category="entrée")
+    
+    def test_recipe_collection_model_success(self):
+        for model_collection_name, model_collection in MODEL_MAP.items():
+            
+            with self.subTest():
+                form_data = {
+                    "member": self.member,
+                    "recipe": self.recipe,
+                }
+
+                recipe_collection_instance = model_collection.objects.create(**form_data)
+
+                self.assertTrue(model_collection.objects.filter(**form_data).exists())
+                self.assertEqual(recipe_collection_instance.saving_date, date.today())
+                self.assertIsNotNone(model_collection.title)
+                self.assertEqual(recipe_collection_instance.get_collection_name(), model_collection_name)
+                print(f"Tested {model_collection_name}")
+    
+    def test_recipe_collection_model_saving_date_null(self):
+        for model_collection_name, model_collection in MODEL_MAP.items():
+            
+            with self.subTest():
+                form_data = {
+                    "member": self.member,
+                    "recipe": self.recipe,
+                    "saving_date": ""
+                }
+                
+                with self.assertRaises(Exception) as e:
+                    model_collection.objects.create(**form_data)
+                    self.assertIn("an invalid date format", e)
+                    print(f"Tested {model_collection_name}")
+        
+
+
+
+
+

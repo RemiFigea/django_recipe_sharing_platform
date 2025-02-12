@@ -1,4 +1,5 @@
 class MockFunctionPathManager():
+    ADD_RECIPE_TO_COLLECTION_IF_CHECKED = "add_recipe_to_collection_if_checked"
     ARE_FORMS_VALID = "are_forms_valid"
     CHECK_REQUEST_VALIDITY = "check_request_validity"
     FILTER_RECIPE_COLLECTION = "filter_recipe_collection"

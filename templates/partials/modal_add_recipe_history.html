@@ -1,7 +1,7 @@
 <div id="modal-add-recipe-history" class="modal hidden" >
     <div class="modal-content">
         <h3>Ajouter cette recette à mon historique</h3>
-        <form class="modal-form" id="add-recipe-history-form">
+        <form class="modal-form" id="add-recipe-history-form" method="post">
             {% csrf_token %}
             <input type="hidden" name="member" value="{{ logged_user.id }}">
             <input type="hidden" name="recipe" value="{{ recipe.id }}">

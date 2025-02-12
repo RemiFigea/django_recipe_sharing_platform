@@ -116,11 +116,11 @@ def add_recipe(request):
     if not logged_user:
         return redirect("/login")
 
-    recipe_form, recipe_ingredient_form_list, recipe_action_form = ut.prepare_recipe_forms(request)
+    recipe_form, recipe_ingredient_form_list, manage_recipe_collection_form = ut.prepare_recipe_forms(request)
 
-    if ut.are_forms_valid(*recipe_ingredient_form_list, recipe_form, recipe_action_form):
-        recipe = ut.save_recipe_with_ingredients(recipe_form, recipe_ingredient_form_list)
-        ut.handle_recipe_collections(recipe_action_form, logged_user, recipe, request)
+    if ut.are_forms_valid(*recipe_ingredient_form_list, recipe_form, manage_recipe_collection_form):
+        recipe = ut.save_recipe_and_ingredients(recipe_form, recipe_ingredient_form_list)
+        ut.handle_recipe_collections(manage_recipe_collection_form, logged_user, recipe, request)
         return redirect("/show-confirmation-page")
         
     else:
@@ -128,7 +128,7 @@ def add_recipe(request):
             "logged_user": logged_user,
             "recipe_form": recipe_form,
             "recipe_ingredient_form_list": recipe_ingredient_form_list,
-            "recipe_action_form": recipe_action_form
+            "manage_recipe_collection_form": manage_recipe_collection_form
             }
         return render(request, "add_recipe.html", context)
 

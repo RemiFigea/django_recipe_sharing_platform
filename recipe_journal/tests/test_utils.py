@@ -6,8 +6,9 @@ from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import RequestFactory, TestCase
 import json
-from recipe_journal.forms import  AddFriendForm, ManageCollectionForm, RecipeCombinedForm, RecipeIngredientForm
-from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
+from recipe_journal.forms import  AddFriendForm, FilterRecipeCollectionForm, ManageCollectionForm, RecipeCombinedForm
+from recipe_journal.forms import RecipeIngredientForm, SearchRecipeForm
+from recipe_journal.models import Ingredient, Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeIngredient, RecipeToTryEntry
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
 from recipe_journal.utils.utils import *
 from recipe_journal.utils import utils
@@ -188,7 +189,7 @@ class CheckRequestValidityTest(TestCase):
         self.factory = RequestFactory()
 
     def check_status_code_400_message(self, params, expected_message):
-        self.request = self.factory.get("/", params)
+        self.request = self.factory.post("/", params)
         logged_user, recipe_id, model, json_response = check_request_validity(self.request)
         self.assertIsNotNone(json_response)
         self.assertIsInstance(json_response, JsonResponse)
@@ -247,7 +248,7 @@ class CheckRequestValidityTest(TestCase):
 
         for model_name in MODEL_MAP:
             params["model_name"] = model_name
-            self.request = self.factory.get("/", params)
+            self.request = self.factory.post("/", params)
             logged_user, recipe_id, model, json_response = check_request_validity(self.request)
             
             self.assertIsNone(json_response)
@@ -586,6 +587,239 @@ class HandleRemoveFriendRequestTest(TestCase):
         self.assertEqual("L'utilisateur test_friend ne fait pas partie de votre liste d'amis.", messages_list[0].message)
         self.assertNotIn(self.friend, self.member.friends.all())
 
+class NormalizeIngredienTest(TestCase):
+    def test_normalize_ingredient_not_None(self):
+        self.assertEqual(normalize_ingredient("pommes de terre"), "pomme de terre")
+    
+    def test_normalize_ingredient_None(self):
+        ingredient_name = None
+        result = normalize_ingredient(ingredient_name)
+
+        self.assertIsNone(result)
+
+class GetIngredientInputsTest(TestCase):
+    @patch.object(utils, path.NORMALIZE_INGREDIENT)
+    def test_get_ingredient_inputs(self, mock_normalize_ingredient):
+        form_data = {
+            "ingredient_1": "carottes",
+            "ingredient_2": "poireaux",
+            "ingredient_3": "pommes de terre",
+        }
+        side_effect = ("carotte", "poireau", "pomme de terre")
+        form = SearchRecipeForm(form_data)
+        form.is_valid()
+        mock_normalize_ingredient.side_effect = side_effect
+        ingredient_inputs_dict = get_ingredient_inputs(form)
+
+        self.assertEqual(mock_normalize_ingredient.call_count, 3)
+
+        self.assertEqual(set(ingredient_inputs_dict.items()), set(zip(form_data.keys(), side_effect)))
+
+class FilterCollectionModelTest(TestCase):
+    def test_filter_collection_model_collection_name_none(self):
+        collection_model_list = filter_collection_model(None)
+
+        self.assertEqual(len(collection_model_list), 2)
+        self.assertEqual(set([RecipeAlbumEntry, RecipeHistoryEntry]), set(collection_model_list))
+    
+    def test_filter_collection_model_cases(self):
+        for collection_model_name, collection_model in MODEL_MAP.items():
+            if collection_model!= RecipeToTryEntry:
+                with self.subTest():
+                    collection_model_list = filter_collection_model(collection_model_name)
+                    self.assertEqual(len(collection_model_list), 1)
+                    self.assertIn(collection_model, collection_model_list)
+
+class FilterCollectionByMemberTest(TestCase):
+    def setUp(self):
+        self.logged_user = Member.objects.create(username="test_user", password="password")
+        for recipe_title in ["recette logged user", "recette commune"]:
+            recipe = Recipe.objects.create(title= recipe_title, category="plat")
+            RecipeAlbumEntry.objects.create(member=self.logged_user, recipe=recipe)
+        self.generic_expected_recipe_title_list = ["recette commune"]
+        self.shared_recipe = Recipe.objects.get(title="recette commune")
+        
+        for ind in range(1, 3):
+            friend  = Member.objects.create(username=f"test_friend{ind}", password="password")
+            recipe = Recipe.objects.create(title=f"recette friend{ind}", category="plat")
+            for model_collection in [RecipeAlbumEntry, RecipeHistoryEntry]:
+                model_collection.objects.create(member=friend, recipe=recipe)
+                model_collection.objects.create(member=friend, recipe=self.shared_recipe)
+            self.logged_user.friends.add(friend)
+            self.generic_expected_recipe_title_list.append(f"recette friend{ind}")
+    
+    def _test_filter_by_member(self, member, expected_qs_length, recipe_title_to_add):
+        recipe_qs = filter_by_member(
+            logged_user=self.logged_user,
+            member=member,
+            collection_model_list=[RecipeAlbumEntry, RecipeHistoryEntry]
+            )
+        self.assertEqual(len(recipe_qs), expected_qs_length)
+        expected_recipe_title_list = self.generic_expected_recipe_title_list.copy()
+        if recipe_title_to_add:
+             expected_recipe_title_list.append(recipe_title_to_add)
+        self.assertEqual(len(recipe_qs.filter(title__in=expected_recipe_title_list)), expected_qs_length)
+    
+    def test_filter_by_member_equal_friends(self):
+        self._test_filter_by_member(member="friends", expected_qs_length=3, recipe_title_to_add=None)
+    
+    def test_filter_by_member_equal_empty(self):
+        self._test_filter_by_member(member="", expected_qs_length=4, recipe_title_to_add="recette logged user")
+
+class HandleSearchRecipeRequestTest(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(username="test_user", password="password")
+        ingredient = Ingredient.objects.create(name="carotte")
+        recipe_ingredient = RecipeIngredient.objects.create(ingredient=ingredient, quantity=1, unit="u")
+        for ind in range(1, 3):
+            Recipe.objects.create(title=f"recette plat_{ind}", category="plat")
+            Recipe.objects.create(title=f"recette dessert_{ind}", category="plat")
+        Recipe.objects.get(title=f"recette plat_{1}", category="plat").recipe_ingredient.add(recipe_ingredient)
+        self.factory = RequestFactory()
+
+
+    def test_handle_search_form_not_valid(self):        
+        self.request = self.factory.get("/", {"category": "unvalid_category"})
+        form, recipe_qs = handle_search_recipe_request(self.request, self.member)
+        
+        self.assertEqual(len(recipe_qs.all()), 4)
+        self.assertIsInstance(form, SearchRecipeForm)
+        self.assertIn("category", form.errors)
+    
+    @patch.object(utils, path.FILTER_BY_MEMBER)
+    @patch.object(utils, path.FILTER_COLLECTION_MODEL)
+    @patch.object(utils, path.GET_INGREDIENT_INPUTS)
+    def test_handle_search_form_cases(self, mock_get_ingredient_inputs, mock_filter_collection_model, mock_filter_by_member):
+        for (ingredient_1, title) in [("carotte", ""), ("", "recette plat_1")]:
+            with self.subTest():
+                mock_ingredient_imputs_dict = {"ingredient_1": ingredient_1}
+                mock_get_ingredient_inputs.return_value = mock_ingredient_imputs_dict
+                mock_filter_collection_model.return_value = "mock_collection_model"
+                mock_filter_by_member.return_value = Recipe.objects.all()
+                
+                request = self.factory.get("/", {"title": title, "ingredient_1": ingredient_1})
+                form, recipe_qs = handle_search_recipe_request(request, self.member)
+                
+                self.assertTrue(form.is_valid())
+                
+                filter_data = dict()
+                if ingredient_1 != "":
+                    filter_data["recipe_ingredient__ingredient__name"] = ingredient_1
+                if title != "":
+                    filter_data["title"] = title
+                expected_qs = Recipe.objects.filter(**filter_data)
+
+                self.assertCountEqual(recipe_qs, expected_qs)
+                self.assertIsInstance(form, SearchRecipeForm)
+                print(f"\n Tested", ingredient_1, title)
+
+class GetMemberRecipeCollectionEntriesTest(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(username="test_user", password="password")
+        self.recipe1 = Recipe.objects.create(title="Recette 1", category="plat")
+        self.recipe2 = Recipe.objects.create(title="Recette 2", category="plat")
+
+        for model in MODEL_MAP.values():
+            model.objects.create(
+                member=self.member, recipe=self.recipe1, saving_date="2025-02-01"
+            )
+            model.objects.create(
+                member=self.member, recipe=self.recipe2, saving_date="2025-02-02"
+            )
+
+    def test_get_member_recipe_collection_entries_with_recipe_history(self):
+        entries = get_member_recipe_collection_entries(RecipeHistoryEntry, self.member)
+        expected_entries_list = [
+            RecipeHistoryEntry.objects.get(saving_date="2025-02-02"),
+            RecipeHistoryEntry.objects.get(saving_date="2025-02-01")
+        ]
+        self.assertEqual(list(entries), expected_entries_list)
+
+    def test_get_member_recipe_collection_entries_with_other_model(self):
+        for model in [RecipeAlbumEntry, RecipeToTryEntry]:
+            expected_entries_list = [
+            model.objects.get(recipe__title="Recette 1"),
+            model.objects.get(recipe__title="Recette 2")
+        ]
+            with self.subTest():
+                entries = get_member_recipe_collection_entries(model, self.member)
+                self.assertEqual(list(entries), expected_entries_list)
+                print(f"\nTested {model.__name__}")
+
+class FilterMemberRecipeCollection(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(username="test_user", password="password")
+        ingredient = Ingredient.objects.create(name="carotte")
+        recipe_ingredient = RecipeIngredient.objects.create(ingredient=ingredient, quantity=1, unit="u")
+        self.recipe1 = Recipe.objects.create(title="Recette 1", category="plat")
+        self.recipe2 = Recipe.objects.create(title="Recette 2", category="plat")
+        self.recipe3 = Recipe.objects.create(title="Recette 3", category="dessert")
+        self.recipe2.recipe_ingredient.add(recipe_ingredient)
+        self.recipe3.recipe_ingredient.add(recipe_ingredient)
+
+        for model in MODEL_MAP.values():
+            model.objects.create(
+                member=self.member, recipe=self.recipe1, saving_date="2025-02-01"
+            )
+            model.objects.create(
+                member=self.member, recipe=self.recipe2, saving_date="2025-02-02"
+            )
+        self.factory = RequestFactory()
+        
+    def test_filter_member_recipe_collection_form_invalid(self):
+        form_data = {}
+        request = self.factory.post("/", form_data)
+        form, recipe_collection_entries = filter_member_recipe_collection(request)
+
+        self.assertEqual(recipe_collection_entries.count(), 0)
+        self.assertIsInstance(form, FilterRecipeCollectionForm)
+        self.assertFalse(form.is_valid())
+        self.assertIn("member", form.errors)
+        self.assertIn("This field is required", form.errors["member"][0])
+        self.assertIn("collection_model_name", form.errors)
+        self.assertIn("This field is required", form.errors["collection_model_name"][0])
+    
+    def _test_filter_member_recipe_collection(self, partial_form_data, collection_model_name):
+        with patch.object(utils, path.GET_INGREDIENT_INPUTS) as mock_ingredient_inputs, \
+        patch.object(utils, path.GET_MEMBER_RECIPE_COLLECTION_ENTRIES) as mock_get_member_recipe_collection_entries:
+            mock_ingredient_inputs.return_value = {"ingredient_1": "carotte"}
+            collection_model = MODEL_MAP.get(collection_model_name)
+            mock_get_member_recipe_collection_entries.return_values = collection_model.objects.filter(member=self.member)
+            
+            form_data = partial_form_data.copy()
+            form_data["member"] = self.member
+            form_data["collection_model_name"] = collection_model_name
+            request = self.factory.post("/", form_data)
+            form, recipe_collection_entries = filter_member_recipe_collection(request)
+
+            filter_data = {
+                f"recipe__{key}" if "ingredient" not in key else "recipe__recipe_ingredient__ingredient__name": value
+                for key, value in partial_form_data.items()
+            }
+            expected_recipe_collection_entries = collection_model.objects.filter(**filter_data)
+
+            self.assertIsInstance(form, FilterRecipeCollectionForm)
+            self.assertFalse(form.is_valid())
+            self.assertEqual(recipe_collection_entries.count(), expected_recipe_collection_entries.count())
+    
+    def test_filter_member_recipe_collection_cases(self):
+        for i, partial_form_data in enumerate([
+            {"category": "dessert"},
+            {
+                "category": "dessert",
+                "title": "Recette 2"
+             },
+             {
+                "category": "dessert",
+                "title": "Recette 2",
+                "ingredient_1": "carottes"
+             },
+            ]):
+            for collection_model_name in MODEL_MAP:
+                with self.subTest():
+                    print(f"\nTested partial_form{i}, model {collection_model_name}")
+                    self._test_filter_member_recipe_collection(partial_form_data, collection_model_name)
+                    print(f"\nTested partial_form{i}, model {collection_model_name}")
 
 
 

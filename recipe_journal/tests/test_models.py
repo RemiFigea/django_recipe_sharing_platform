@@ -148,7 +148,7 @@ class BaseRecipeCollectionModelTest(TestCase):
                 self.assertTrue(model_collection.objects.filter(**form_data).exists())
                 self.assertEqual(recipe_collection_instance.saving_date, date.today())
                 self.assertIsNotNone(model_collection.title)
-                self.assertEqual(recipe_collection_instance.get_collection_name(), model_collection_name)
+                self.assertEqual(recipe_collection_instance.__class__.__name__, model_collection_name)
                 print(f"Tested {model_collection_name}")
     
     def test_recipe_collection_model_saving_date_null(self):

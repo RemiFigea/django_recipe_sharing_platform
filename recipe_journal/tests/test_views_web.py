@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.test import TestCase
 from django.urls import reverse
-from recipe_journal.models import Member, Recipe
+from recipe_journal.models import Member, Recipe, RecipeAlbumEntry
 from unittest.mock import MagicMock, patch
 from recipe_journal.forms import AddFriendForm, FilterRecipeCollectionForm, RegistrationForm, SearchRecipeForm
 import recipe_journal.utils.utils as ut
@@ -250,7 +250,7 @@ class AddRecipeViewTest(TestCase):
     @patch.object(ut, path.ARE_FORMS_VALID)
     def test_add_recipe_form_unvalid(self, mock_are_forms_valid, mock_prepare_recipe_forms, mock_get_logged_user):
         mock_get_logged_user.return_value = "mocked_user"
-        mock_prepare_recipe_forms.return_value = ("mocked_recipe_form", "mocked_ingredient_forms", "mocked_action_form")
+        mock_prepare_recipe_forms.return_value = ("mocked_recipe_form", "mocked_ingredient_forms", "mocked_manage_recipe_collection_form")
         mock_are_forms_valid.return_value = False
         response = self.client.post(reverse("add_recipe"))
 
@@ -261,7 +261,7 @@ class AddRecipeViewTest(TestCase):
         self.assertEqual(context["logged_user"], "mocked_user")
         self.assertEqual(context["recipe_form"], "mocked_recipe_form")
         self.assertEqual(context["recipe_ingredient_form_list"], "mocked_ingredient_forms")
-        self.assertEqual(context["recipe_action_form"], "mocked_action_form")
+        self.assertEqual(context[ "manage_recipe_collection_form"], "mocked_manage_recipe_collection_form")
                          
 
     def test_add_recipe_form_valid(self):
@@ -389,13 +389,13 @@ class ShowFriendsTest(TestCase):
         self.assertEqual(self.member, context["logged_user"])
         self.assertNotIn(self.friend, context["friends"])
 
-class ShowRecipeCollectionTest(TestCase):
+class ShowMemberRecipeCollectionTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="testuser", password=make_password("password"))
         self.client.post(reverse("login"), {"username":"testuser", "password":"password"})
 
     @patch.object(ut, path.GET_LOGGED_USER)
-    def test_show_recipe_collection_user_not_logged(self, mock_get_logged_user):
+    def test_show_member_recipe_collection_user_not_logged(self, mock_get_logged_user):
         mock_get_logged_user.return_value = None
         response = self.client.post(reverse("show_recipe_collection"))
         
@@ -403,18 +403,12 @@ class ShowRecipeCollectionTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, "/login")
     
-    @patch.object(ut, path.FILTER_RECIPE_COLLECTION)
-    def test_show_recipe_collection_form_is_none(self, mock_filter_recipe_collection):
-        mock_filter_recipe_collection.return_value = None, "mock_recipe_collection"
-        response = self.client.post(reverse("show_recipe_collection"))
-        
-        self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, "/welcome")
     
-    @patch.object(ut, path.FILTER_RECIPE_COLLECTION)
-    def test_show_recipe_collection_form_empty(self, mock_filter_recipe_collection):
+    @patch.object(ut, path.FILTER_MEMBER_RECIPE_COLLECTION)
+    def test_show_member_recipe_collection_form_empty(self, mock_filter_member_recipe_collection):
         mock_empty_form = FilterRecipeCollectionForm()
-        mock_filter_recipe_collection.return_value = mock_empty_form, "mock_recipe_collection"
+        mock_empty_form.is_valid()
+        mock_filter_member_recipe_collection.return_value = mock_empty_form, "mock_recipe_collection_entries"
         response = self.client.post(reverse("show_recipe_collection"))
         
         self.assertEqual(response.status_code, 200)
@@ -424,19 +418,21 @@ class ShowRecipeCollectionTest(TestCase):
         self.assertEqual(context["logged_user"], self.member)
         self.assertIn("member", context)
         self.assertEqual(context["form"], mock_empty_form)
-        self.assertEqual(context["recipe_entries"], "mock_recipe_collection")
+        self.assertEqual(context["recipe_entries"], "mock_recipe_collection_entries")
+        self.assertIn('id="form-filter-recipe-collection"', response.content.decode())
     
-    @patch.object(ut, path.FILTER_RECIPE_COLLECTION)
-    def test_show_recipe_collection_form_with_data(self, mock_filter_recipe_collection):
+    @patch.object(ut, path.FILTER_MEMBER_RECIPE_COLLECTION)
+    def test_show_member_recipe_collection_form_with_data(self, mock_filter_recipe_collection):
         fom_data = {
             "title": "mock recette",
             "category": "dessert",
-            "collection": "RecipeAlbumEntry",
+            "collection_model_name": "RecipeAlbumEntry",
             "member": self.member,
             "ingredient_1": "mock ingredient"
             }
         mock_form = FilterRecipeCollectionForm(fom_data)
-        mock_filter_recipe_collection.return_value = mock_form, "mock_recipe_collection"
+        mock_form.is_valid()
+        mock_filter_recipe_collection.return_value = mock_form, "mock_recipe_collection_entries"
         response = self.client.post(reverse("show_recipe_collection"))
         
         self.assertEqual(response.status_code, 200)

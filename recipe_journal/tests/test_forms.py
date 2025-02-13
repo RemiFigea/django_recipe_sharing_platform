@@ -368,29 +368,35 @@ class FilterRecipeCollectionTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="test_user", password=make_password("password123"))
     
-    def _test_filter_recipe_form(self, model_collection_name):
-        form = FilterRecipeCollectionForm({"collection": model_collection_name, "member": self.member})
+    def _test_filter_recipe_form(self, collection_model_name):
+        form = FilterRecipeCollectionForm({"collection_model_name": collection_model_name, "member": self.member})
         self.assertTrue(form.is_valid())
     
     def test_filter_recipe_form_cases(self):
-        for model_collection_name in MODEL_MAP:
+        for collection_model_name in MODEL_MAP:
             with self.subTest():
-                self._test_filter_recipe_form(model_collection_name)
-                print(f"Tested {model_collection_name}")
+                self._test_filter_recipe_form(collection_model_name)
+                print(f"\nTested {collection_model_name}")
 
-    def test_filter_recipe_form_no_collection(self):
+    def test_filter_recipe_form_no_collection_model(self):
         form = FilterRecipeCollectionForm({"member": self.member})
 
         self.assertFalse(form.is_valid())
-        self.assertIn("collection", form.errors)
-        self.assertTrue(any("This field is required" in error_msg for error_msg in form.errors["collection"]))
+        self.assertIn("collection_model_name", form.errors)
+        self.assertTrue(any("This field is required" in error_msg for error_msg in form.errors["collection_model_name"]))
     
     def test_filter_recipe_form_no_member(self):
-        form = FilterRecipeCollectionForm({"collection": "RecipeToTryEntry"})
+        form = FilterRecipeCollectionForm({"collection_model_name": "RecipeToTryEntry"})
 
         self.assertFalse(form.is_valid())
         self.assertIn("member", form.errors)
         self.assertTrue(any("This field is required" in error_msg for error_msg in form.errors["member"]))
+    
+    def test_collection_model_choices_match_model_map(self):
+        form_choices = {choice[0] for choice in FilterRecipeCollectionForm.collection_choices}
+        model_map_keys = set(MODEL_MAP.keys())
+
+        self.assertSetEqual(form_choices, model_map_keys, "Les choix du formulaire ne correspondent pas exactement aux clés de MODEL_MAP")
 
 
 

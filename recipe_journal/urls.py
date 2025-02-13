@@ -21,7 +21,7 @@ from django.urls import path
 from recipe_journal.views.api import add_ingredient_form, add_to_collection, add_recipe_history, check_collection_status
 from recipe_journal.views.api import check_title, remove_from_collection,  remove_recipe_history
 from recipe_journal.views.web import add_recipe, login, logout, modify_profile, register, search_recipe
-from recipe_journal.views.web import show_friends, show_recipe, show_recipe_collection, show_confirmation_page
+from recipe_journal.views.web import show_friends, show_recipe, show_member_recipe_collection, show_confirmation_page
 from recipe_journal.views.web import welcome
 
 urlpatterns = [
@@ -43,7 +43,7 @@ urlpatterns = [
     path("show-confirmation-page", show_confirmation_page, name="show_confirmation_page"),
     path("show-friends", show_friends, name="show_friends"),
     path("show-recipe", show_recipe, name="show_recipe"),
-    path("show-recipe-collection", show_recipe_collection, name="show_recipe_collection"),
+    path("show-recipe-collection", show_member_recipe_collection, name="show_recipe_collection"),
     path("welcome", welcome, name="welcome"),
 ]
 

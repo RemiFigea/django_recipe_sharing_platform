@@ -27,7 +27,7 @@
                         <div class="dropdown-menu">
                             <form method="post" action="show-recipe-collection">
                                 {% csrf_token %}
-                                <input type="hidden" name="collection" class="hidden" value="RecipeHistoryEntry">
+                                <input type="hidden" name="collection_model" class="hidden" value="RecipeHistoryEntry">
                                 <input type="hidden" name="member" value="{{ logged_user.id }}">
                                 <input class="dropdown-item" type="submit" value="Mon historique de recettes">
                             </form>
@@ -46,7 +46,7 @@
                 <li>
                     <form method="post" action="show-recipe-collection">
                         {% csrf_token %}
-                        <input type="hidden" name="collection" class="hidden" value="RecipeAlbumEntry">
+                        <input type="hidden" name="collection_model" class="hidden" value="RecipeAlbumEntry">
                         <input type="hidden" name="member" value="{{ logged_user.id }}">
                         <input  class="header-link"  type="submit" value="Mon album de recettes">
                     </form>
@@ -54,7 +54,7 @@
                 <li>
                     <form method="post" action="show-recipe-collection" class="header-link" >
                         {% csrf_token %}
-                        <input type="hidden" name="collection" class="hidden" value="RecipeToTryEntry">
+                        <input type="hidden" name="collection_model" class="hidden" value="RecipeToTryEntry">
                         <input type="hidden" name="member" value="{{ logged_user.id }}">
                         <input class="header-link" type="submit" value="Mes recettes à essayer">
                     </form>

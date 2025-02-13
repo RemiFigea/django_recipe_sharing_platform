@@ -104,8 +104,8 @@ class BaseRecipeCollectionEntry(models.Model):
     saving_date = models.DateField(default=date.today, null=False, blank=True)
     personal_note = models.TextField(null=True, blank=True)
 
-    def get_collection_name(self):
-        return self.__class__.__name__
+    # def get_collection_name(self):
+    #     return self.__class__.__name__
 
     class Meta:
         abstract = True

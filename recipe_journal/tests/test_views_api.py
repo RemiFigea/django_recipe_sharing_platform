@@ -2,13 +2,13 @@
 Unit tests for the views Django contained in the module api.py..
 """
 from datetime import date
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.test import TestCase
 from django.urls import reverse
 from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeToTryEntry, RecipeHistoryEntry
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
 import recipe_journal.utils.utils as ut
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import patch
 
 path = MockFunctionPathManager()
 

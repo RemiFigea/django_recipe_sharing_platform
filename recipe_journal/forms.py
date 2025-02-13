@@ -446,7 +446,7 @@ class SearchRecipeForm(forms.Form):
 
     title = forms.CharField(label="titre de la recette:", required=False)
     category = forms.ChoiceField(label="type de plat:", choices=[("", "tous")] + Recipe.CATEGORY_CHOICES, required=False)
-    collection = forms.ChoiceField(label="collection:", choices=collection_choices, required=False)
+    collection_name = forms.ChoiceField(label="collection:", choices=collection_choices, required=False)
     member = forms.ChoiceField(label="membres:", choices=member_choices, required=False)
     ingredient_1 = forms.CharField(label="ingredient 1:", required=False)
     ingredient_2 = forms.CharField(label="ingredient 2:", required=False)
@@ -461,7 +461,11 @@ class FilterRecipeCollectionForm(forms.Form):
 
     title = forms.CharField(label="titre de la recette:", required=False)
     category = forms.ChoiceField(label="type de plat:", choices=[("", "tous")] + Recipe.CATEGORY_CHOICES, required=False)
-    collection = forms.ChoiceField(label="collection:", choices=collection_choices, required=True)
+    collection_model_name = forms.ChoiceField(
+        label="Collection :",
+        choices=collection_choices,
+        required=True
+    )
     member =  forms.ModelChoiceField(
         label="membre",
         queryset=Member.objects.all(),

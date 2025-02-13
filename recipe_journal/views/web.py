@@ -185,34 +185,6 @@ def show_friends(request):
     }
     return render(request, "show_friends.html", context)
 
-def show_recipe_collection(request):
-    """
-    Displays a member's recipe collection for a specified collection model (album, to-try, history).
-    """
-    logged_user = ut.get_logged_user(request)
-    if not logged_user:
-        return redirect("/login")
-    
-    form, recipe_collection_entries = ut.filter_recipe_collection(request)
-
-    if not form:
-        return redirect("/welcome")
-
-    form_html = render_to_string("partials/form_filter_recipe_collection.html", {"form": form}, request=request)
-    member = getattr(form, "cleaned_data", {}).get("member", None)
-    collection_name = getattr(form, "cleaned_data", {}).get("collection", None)
-    collection_model = MODEL_MAP.get(collection_name)
-    
-    context = {
-        "logged_user": logged_user,
-        "form": form_html,
-        "member": member,
-        "collection_model": collection_model,
-        "recipe_entries": recipe_collection_entries,
-        "MEDIA_URL": settings.MEDIA_URL,
-    }
-    return render(request, "show_recipe_collection.html", context)
-
 def search_recipe(request):
     """Handles recipe search and renders the search page."""
     logged_user = ut.get_logged_user(request)
@@ -237,5 +209,33 @@ def search_recipe(request):
     }
 
     return render(request, "search_recipe.html", context)
+
+@require_http_methods(["POST"])
+def show_member_recipe_collection(request):
+    """
+    Displays a member's recipe collection for a specified collection model (album, to-try, history).
+    """
+    logged_user = ut.get_logged_user(request)
+    if not logged_user:
+        return redirect("/login")
+    
+    form, recipe_collection_entries = ut.filter_member_recipe_collection(request)
+
+    form_html = render_to_string("partials/form_filter_recipe_collection.html", {"form": form}, request=request)
+    member = getattr(form, "cleaned_data", {}).get("member", None)
+    collection_model_name = getattr(form, "cleaned_data", {}).get("collection_model_name", None)
+    collection_model = MODEL_MAP.get(collection_model_name)
+    
+    context = {
+        "logged_user": logged_user,
+        "form": form_html,
+        "member": member,
+        "collection_model": collection_model,
+        "recipe_entries": recipe_collection_entries,
+        "MEDIA_URL": settings.MEDIA_URL,
+    }
+    return render(request, "show_recipe_collection.html", context)
+
+
 
 

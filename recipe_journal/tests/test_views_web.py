@@ -5,8 +5,8 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.test import TestCase
 from django.urls import reverse
-from recipe_journal.models import Member, Recipe, RecipeAlbumEntry
-from unittest.mock import MagicMock, patch
+from recipe_journal.models import Member, Recipe
+from unittest.mock import patch
 from recipe_journal.forms import AddFriendForm, FilterRecipeCollectionForm, RegistrationForm, SearchRecipeForm
 import recipe_journal.utils.utils as ut
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
@@ -426,7 +426,7 @@ class ShowMemberRecipeCollectionTest(TestCase):
         fom_data = {
             "title": "mock recette",
             "category": "dessert",
-            "collection_model_name": "RecipeAlbumEntry",
+            "collection_name": "album",
             "member": self.member,
             "ingredient_1": "mock ingredient"
             }
@@ -440,7 +440,7 @@ class ShowMemberRecipeCollectionTest(TestCase):
 
         context = response.context
         self.assertEqual(context["member"], self.member)
-        self.assertEqual(context["collection_model"].__name__, "RecipeAlbumEntry")
+        self.assertEqual(context["collection_name"], "album")
         self.assertEqual(context["form"], mock_form)
         self.assertIn("mock recette", str(context["form"]))
         self.assertIn('id="form-filter-recipe-collection"', response.content.decode())

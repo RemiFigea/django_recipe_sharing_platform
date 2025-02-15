@@ -1,6 +1,7 @@
 """
 Unit tests for the module models.py.
 """
+from datetime import date
 from django.contrib.auth.hashers import make_password
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
@@ -10,13 +11,6 @@ from recipe_journal.models import *
 import shutil
 import tempfile
 from unittest.mock import patch
-
-MODEL_MAP = {
-        "RecipeAlbumEntry": RecipeAlbumEntry,
-        "RecipeToTryEntry": RecipeToTryEntry,
-        "RecipeHistoryEntry": RecipeHistoryEntry
-    }
-
 
 class MemberModelTest(TestCase):
     def test_username_unique(self):
@@ -129,42 +123,43 @@ class IngredientModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             Ingredient.objects.create(name="jambon")
 
-class BaseRecipeCollectionModelTest(TestCase):
+class RecipeCollectionModelTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="testuser", password=make_password("password123"))
         self.recipe = Recipe.objects.create(title="recipe_title", category="entrée")
     
-    def test_recipe_collection_model_success(self):
-        for model_collection_name, model_collection in MODEL_MAP.items():
+    def test_recipe_collection_success(self):
+        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
             
             with self.subTest():
                 form_data = {
+                    "collection_name": collection_name,
                     "member": self.member,
                     "recipe": self.recipe,
                 }
 
-                recipe_collection_instance = model_collection.objects.create(**form_data)
+                recipe_collection = RecipeCollectionEntry.objects.create(**form_data)
 
-                self.assertTrue(model_collection.objects.filter(**form_data).exists())
-                self.assertEqual(recipe_collection_instance.saving_date, date.today())
-                self.assertIsNotNone(model_collection.title)
-                self.assertEqual(recipe_collection_instance.__class__.__name__, model_collection_name)
-                print(f"Tested {model_collection_name}")
+                self.assertTrue(RecipeCollectionEntry.objects.filter(**form_data).exists())
+                self.assertEqual(recipe_collection.saving_date, date.today())
+                print(f"\nTested {collection_name}")
     
-    def test_recipe_collection_model_saving_date_null(self):
-        for model_collection_name, model_collection in MODEL_MAP.items():
-            
+    def test_recipe_collection_model_invalid_choices(self):
+
+        for partial_form_data in [
+            {"collection_name": "invalid_collection_name"},
+            {"saving_date": "invalid_date"}
+        ]:
             with self.subTest():
                 form_data = {
                     "member": self.member,
                     "recipe": self.recipe,
-                    "saving_date": ""
+                    **partial_form_data
                 }
-                
+            
                 with self.assertRaises(Exception) as e:
-                    model_collection.objects.create(**form_data)
-                    self.assertIn("an invalid date format", e)
-                    print(f"Tested {model_collection_name}")
+                    RecipeCollectionEntry.objects.create(**form_data)
+                print(f"\nTested '{partial_form_data}'")
         
 
 

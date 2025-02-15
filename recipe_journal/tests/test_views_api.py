@@ -5,18 +5,12 @@ from datetime import date
 from django.http import HttpResponse
 from django.test import TestCase
 from django.urls import reverse
-from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeToTryEntry, RecipeHistoryEntry
+from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
 import recipe_journal.utils.utils as ut
 from unittest.mock import patch
 
 path = MockFunctionPathManager()
-
-MODEL_MAP = {
-        "RecipeAlbumEntry": RecipeAlbumEntry,
-        "RecipeToTryEntry": RecipeToTryEntry,
-        "RecipeHistoryEntry": RecipeHistoryEntry
-    }
 
 class CheckTitleTest(TestCase):
     def check_status_code_200_error_list(self, params, expected_message_list):
@@ -93,8 +87,8 @@ class CheckCollectionStatusTest(TestCase):
         self.assertEqual(response, "mocked_error_response")
 
     @patch.object(ut, path.CHECK_REQUEST_VALIDITY)
-    def check_recipe_is_in_collection(self, mock_check_request_validity,  model, expected_result):
-        mock_check_request_validity.return_value= self.member, self.recipe.id, model, None
+    def check_recipe_is_in_collection(self, mock_check_request_validity,  collection_name, expected_result):
+        mock_check_request_validity.return_value= self.member, self.recipe.id, collection_name, None
         response = self.client.post(reverse("check_collection_status"))
 
         self.assertEqual(response.status_code, 200)
@@ -105,35 +99,39 @@ class CheckCollectionStatusTest(TestCase):
     def test_check_collection_is_in_collection_True(self, mock_get_logged_user):
         mock_get_logged_user.return_value =  self.member
 
-        for model in MODEL_MAP.values():
-            model.objects.create(member=self.member, recipe=self.recipe)
-            self.check_recipe_is_in_collection(model=model, expected_result=True)
+        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
+            RecipeCollectionEntry.objects.create(
+                collection_name=collection_name,
+                member=self.member,
+                recipe=self.recipe
+                )
+            self.check_recipe_is_in_collection(collection_name=collection_name, expected_result=True)
 
     @patch.object(ut, path.GET_LOGGED_USER)
     def test_check_collection_is_in_collection_False(self, mock_get_logged_user):
         mock_get_logged_user.return_value =  self.member
 
-        for model in MODEL_MAP.values():
-            self.check_recipe_is_in_collection(model=model, expected_result=False)
+        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
+            self.check_recipe_is_in_collection(collection_name=collection_name, expected_result=False)
 
-class ManageCollectionTest(TestCase):
+class UpdateCollectionTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="test_user", password="password")
         self.recipe = Recipe.objects.create(title="recette test", category="plat")
     
-    def test_manage_collection_method_get(self):
+    def test_update_collection_method_get(self):
         for url_name in ["add_to_collection", "remove_from_collection"]:
             response = self.client.get(reverse(url_name))
 
             self.assertEqual(response.status_code, 405)
     
-    def test_manage_collection_called(self):
+    def test_update_collection_called(self):
         for url_name, action in ("add_to_collection", "add"), ("remove_from_collection", "remove"):
-            with patch.object(ut, path.MANAGE_COLLECTION) as mock_manage_collection:
-                mock_manage_collection.return_value = HttpResponse(status=200)
+            with patch.object(ut, path.UPDATE_COLLECTION) as mock_update_collection:
+                mock_update_collection.return_value = HttpResponse(status=200)
                 response = self.client.post(reverse(url_name))
                 
-                mock_manage_collection.assert_called_once_with(response.wsgi_request, action)
+                mock_update_collection.assert_called_once_with(response.wsgi_request, action)
                 self.assertEqual(response.status_code, 200)
 
 class AddRecipeHistoryTest(TestCase):
@@ -191,10 +189,11 @@ class RemoveRecipeHistoryTest(TestCase):
         self.assertIn("recipe_history_entry_date", response.json()["form_html"])
 	
     def test_remove_recipe_history_form_valid(self):
-        RecipeHistoryEntry.objects.create(
-              member = self.member,
-              recipe=self.recipe,
-              saving_date= date.today()
+        RecipeCollectionEntry.objects.create(
+            collection_name="history",
+            member = self.member,
+            recipe=self.recipe,
+            saving_date= date.today()
         )
 
         form_data = {

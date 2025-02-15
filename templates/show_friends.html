@@ -20,13 +20,13 @@
                 <div class="dropdown-menu">
                     <form method="post" action="show-recipe-collection">
                         {% csrf_token %}
-                        <input type="hidden" name="collection" class="hidden" value="RecipeAlbumEntry">
+                        <input type="hidden" name="collection_name" class="hidden" value="album">
                         <input type="hidden" name="member" value="{{ friend.id }}">
                         <input class="dropdown-item" type="submit" value="Album de recettes">
                     </form>
                     <form method="post" action="show-recipe-collection">
                         {% csrf_token %}
-                        <input type="hidden" name="collection" class="hidden" value="RecipeHistoryEntry">
+                        <input type="hidden" name="collection_name" class="hidden" value="history">
                         <input type="hidden" name="member" value="{{ friend.id }}">
                         <input class="dropdown-item" type="submit" value="Historique de recettes">
                     </form>

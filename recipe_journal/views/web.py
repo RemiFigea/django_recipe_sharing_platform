@@ -20,15 +20,8 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 from recipe_journal.forms import LoginForm, AddFriendForm, ModifyProfileForm
 from recipe_journal.forms import RegistrationForm, SearchRecipeForm
-from recipe_journal.models import Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeToTryEntry
+from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 import recipe_journal.utils.utils as ut
-from recipe_journal.models import Recipe, RecipeHistoryEntry, RecipeAlbumEntry, RecipeToTryEntry
-
-MODEL_MAP = {
-        "RecipeAlbumEntry": RecipeAlbumEntry,
-        "RecipeToTryEntry": RecipeToTryEntry,
-        "RecipeHistoryEntry": RecipeHistoryEntry
-    }
 
 def login(request):
     """
@@ -93,10 +86,17 @@ def welcome(request):
     THUMBNAIL_RECIPE_NB = 12
 
     logged_user = ut.get_logged_user(request)
-    top_recipe_ids_list = ut.get_daily_random_sample(TOP_RECIPE_NB)
-    top_recipe_list = Recipe.objects.filter(id__in=top_recipe_ids_list)
-    thumbnail_recipe_ids_list = ut.get_daily_random_sample(THUMBNAIL_RECIPE_NB)
-    thumbnail_recipe_list = Recipe.objects.filter(id__in=thumbnail_recipe_ids_list)
+    # top_recipe_ids_list = ut.get_daily_random_sample(TOP_RECIPE_NB)
+    # top_recipe_list = Recipe.objects.filter(id__in=top_recipe_ids_list)
+    # thumbnail_recipe_ids_list = ut.get_daily_random_sample(THUMBNAIL_RECIPE_NB)
+    # thumbnail_recipe_list = Recipe.objects.filter(id__in=thumbnail_recipe_ids_list)
+    recipe_ids_list = ut.get_daily_random_sample(TOP_RECIPE_NB + THUMBNAIL_RECIPE_NB)
+    if len(recipe_ids_list) >= TOP_RECIPE_NB:
+        top_recipe_list = Recipe.objects.filter(id__in=recipe_ids_list[:TOP_RECIPE_NB])
+        thumbnail_recipe_list = Recipe.objects.filter(id__in=recipe_ids_list[TOP_RECIPE_NB:])
+    else:
+        top_recipe_list = Recipe.objects.filter(id__in=recipe_ids_list[:TOP_RECIPE_NB])
+        thumbnail_recipe_list = []
 
     context = {
         "logged_user": logged_user,
@@ -116,11 +116,11 @@ def add_recipe(request):
     if not logged_user:
         return redirect("/login")
 
-    recipe_form, recipe_ingredient_form_list, manage_recipe_collection_form = ut.prepare_recipe_forms(request)
+    recipe_form, recipe_ingredient_form_list, add_recipe_to_collection_form = ut.prepare_recipe_forms(request)
 
-    if ut.are_forms_valid(*recipe_ingredient_form_list, recipe_form, manage_recipe_collection_form):
+    if ut.are_forms_valid(*recipe_ingredient_form_list, recipe_form, add_recipe_to_collection_form):
         recipe = ut.save_recipe_and_ingredients(recipe_form, recipe_ingredient_form_list)
-        ut.handle_recipe_collections(manage_recipe_collection_form, logged_user, recipe, request)
+        ut.link_recipe_to_collections(add_recipe_to_collection_form, logged_user, recipe, request)
         return redirect("/show-confirmation-page")
         
     else:
@@ -128,7 +128,7 @@ def add_recipe(request):
             "logged_user": logged_user,
             "recipe_form": recipe_form,
             "recipe_ingredient_form_list": recipe_ingredient_form_list,
-            "manage_recipe_collection_form": manage_recipe_collection_form
+            "manage_recipe_collection_form": add_recipe_to_collection_form
             }
         return render(request, "add_recipe.html", context)
 
@@ -193,17 +193,17 @@ def search_recipe(request):
         return redirect("/login")
     
     form = SearchRecipeForm()
-    recipe_entries = Recipe.objects.all()
+    recipes_qs = Recipe.objects.all()
 
     if request.method == "GET":
-        form, recipe_entries = ut.handle_search_recipe_request(request, logged_user)
+        form, recipes_qs = ut.handle_search_recipe_request(request, logged_user)
        
     form_html = render_to_string("partials/form_search_recipe.html", {"form": form}, request=request)
 
     
     context = {
     "logged_user": logged_user,
-    "thumbnail_recipes": recipe_entries,
+    "thumbnail_recipes": recipes_qs,
     "form": form_html,
     "MEDIA_URL": settings.MEDIA_URL,
     }
@@ -223,14 +223,15 @@ def show_member_recipe_collection(request):
 
     form_html = render_to_string("partials/form_filter_recipe_collection.html", {"form": form}, request=request)
     member = getattr(form, "cleaned_data", {}).get("member", None)
-    collection_model_name = getattr(form, "cleaned_data", {}).get("collection_model_name", None)
-    collection_model = MODEL_MAP.get(collection_model_name)
-    
+    collection_name = getattr(form, "cleaned_data", {}).get("collection_name", None)
+    collection_title = dict(RecipeCollectionEntry.COLLECTION_CHOICES).get(collection_name)
+
     context = {
         "logged_user": logged_user,
         "form": form_html,
         "member": member,
-        "collection_model": collection_model,
+        "collection_name": collection_name,
+        "collection_title": collection_title,
         "recipe_entries": recipe_collection_entries,
         "MEDIA_URL": settings.MEDIA_URL,
     }

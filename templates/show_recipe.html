@@ -21,25 +21,25 @@
     <h1>Titre de la recette: {{ recipe.title }}</h1>
     <p>Lien web: <a href={{ recipe.url_link }}>{{ recipe.url_link }}</a></p>
     <div id="collection-buttons" current-recipe-id="{{ recipe.id }}">
-        <div class="dropdown"  model-name="RecipeAlbumEntry">
+        <div class="dropdown"  collection-name="album">
             <button class="collection-button" id="album-button" type="button">mon album</button>
             <div class="dropdown-menu">
-                <button type="button" class="dropdown-item add-to-collection" id="add-to-album">Ajouter à mon album</button>
-                <button type="button" class="dropdown-item remove-from-collection" id="remove-from-album">Retirer de mon album</button>
+                <button type="button" class="dropdown-item add-to-collection">Ajouter à mon album</button>
+                <button type="button" class="dropdown-item remove-from-collection">Retirer de mon album</button>
             </div>
         </div>
-        <div class="dropdown" model-name="RecipeHistoryEntry">
+        <div class="dropdown" collection-name="history">
             <button class="collection-button" id="history-button" type="button">mon historique</button>
             <div class="dropdown-menu">
                 <button type="button" class="dropdown-item add-to-collection" id="add-to-history">Ajouter à mon historique</button>
                 <button type="button" class="dropdown-item remove-from-collection" id="remove-from-history">Retirer de mon historique</button>
             </div>
         </div>
-        <div class="dropdown" model-name="RecipeToTryEntry">
+        <div class="dropdown" collection-name="trials">
             <button class="collection-button" id="recipe-to-try-button" type="button">mes recettes à essayer</button>
             <div class="dropdown-menu">
-                <button type="button" class="dropdown-item add-to-collection" id="add-to-recipe-to-try">Ajouter à mes recettes à essayer</button>
-                <button type="button" class="dropdown-item remove-from-collection" id="remove-from-recipe-to-try">Retirer de mes recettes à essayer</button>
+                <button type="button" class="dropdown-item add-to-collection">Ajouter à mes recettes à essayer</button>
+                <button type="button" class="dropdown-item remove-from-collection">Retirer de mes recettes à essayer</button>
             </div>
         </div>
     </div>

@@ -6,9 +6,9 @@ from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import RequestFactory, TestCase
 import json
-from recipe_journal.forms import  AddFriendForm, FilterRecipeCollectionForm, ManageCollectionForm, RecipeCombinedForm
+from recipe_journal.forms import  FilterRecipeCollectionForm, AddRecipeToCollectionForm, RecipeCombinedForm
 from recipe_journal.forms import RecipeIngredientForm, SearchRecipeForm
-from recipe_journal.models import Ingredient, Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeIngredient, RecipeToTryEntry
+from recipe_journal.models import Ingredient, Member, Recipe, RecipeIngredient
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
 from recipe_journal.utils.utils import *
 from recipe_journal.utils import utils
@@ -16,12 +16,6 @@ from django.urls import reverse
 from unittest.mock import MagicMock, patch
 
 path = MockFunctionPathManager()
-
-MODEL_MAP = {
-        "RecipeAlbumEntry": RecipeAlbumEntry,
-        "RecipeToTryEntry": RecipeToTryEntry,
-        "RecipeHistoryEntry": RecipeHistoryEntry
-    }
 
 class GetLoggedUserTest(TestCase):
     def setUp(self):
@@ -111,15 +105,15 @@ class GetRecipeIngredientListTest(TestCase):
             "unit": ["u"]
             }
 
-        self.request = self.factory.post('/', form_data)
-        recipe_ingredient_list = get_recipe_ingredient_list(self.request)
+        request = self.factory.post('/', form_data)
+        recipe_ingredient_list = get_recipe_ingredient_list(request)
         self.assertEqual(recipe_ingredient_list, [])
     
     def test_get_recipe_ingredient_list_empty(self):
         form_data = {"name": [], "quantity": [], "unit": []}
 
-        self.request = self.factory.post('/', form_data)
-        recipe_ingredient_list = get_recipe_ingredient_list(self.request)
+        request = self.factory.post('/', form_data)
+        recipe_ingredient_list = get_recipe_ingredient_list(request)
         self.assertEqual(recipe_ingredient_list, [])
     
     def test_get_recipe_ingredient_list_field_missing(self):
@@ -127,8 +121,8 @@ class GetRecipeIngredientListTest(TestCase):
             "name": ["carotte", "choux"],
             "unit": ["kg", "u"]
             }
-        self.request = self.factory.post('/', form_data)
-        recipe_ingredient_list = get_recipe_ingredient_list(self.request)
+        request = self.factory.post('/', form_data)
+        recipe_ingredient_list = get_recipe_ingredient_list(request)
         self.assertEqual(recipe_ingredient_list, [])
 
 class GetRecipeIngredientFormListTest(TestCase):
@@ -164,9 +158,9 @@ class InitializecombinedFormTest(TestCase):
             "category": "dessert",
             "cooking_time": 10,
             }
-        self.request = self.factory.post('/', form_data)
+        request = self.factory.post('/', form_data)
 
-        form = initialize_combined_form(RecipeCombinedForm, self.request)
+        form = initialize_combined_form(RecipeCombinedForm, request)
         self.assertTrue(form.is_valid())
         cleaned_data = form.clean()
         self.assertEqual(cleaned_data["main_form"]["title"], "recette test")
@@ -178,8 +172,8 @@ class InitializeFormTest(TestCase):
         self.factory = RequestFactory()
     
     def test_initialize_form_valid_data(self):
-        self.request = self.factory.post("/", {"add_to_album": True})
-        form = initialize_form(ManageCollectionForm, self.request)
+        request = self.factory.post("/", {"add_to_album": True})
+        form = initialize_form(AddRecipeToCollectionForm, request)
 
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["add_to_album"], True)
@@ -189,8 +183,8 @@ class CheckRequestValidityTest(TestCase):
         self.factory = RequestFactory()
 
     def check_status_code_400_message(self, params, expected_message):
-        self.request = self.factory.post("/", params)
-        logged_user, recipe_id, model, json_response = check_request_validity(self.request)
+        request = self.factory.post("/", params)
+        logged_user, recipe_id, collection_name, json_response = check_request_validity(request)
         self.assertIsNotNone(json_response)
         self.assertIsInstance(json_response, JsonResponse)
 
@@ -213,30 +207,30 @@ class CheckRequestValidityTest(TestCase):
         mock_get_logged_user.return_value = "mocked_user"
 
         self.check_status_code_400_message(
-            params={"model_name": "mocked_model_name"},
+            params={"collection_name": "mocked_collection_name"},
             expected_message="ID de recette manquant."
             )
 
     @patch.object(utils, path.GET_LOGGED_USER)
-    def test_check_request_validity_no_model_name(self, mock_get_logged_user):
+    def test_check_request_validity_no_collection_name(self, mock_get_logged_user):
         mock_get_logged_user.return_value = "mocked_user"
 
         self.check_status_code_400_message(
             params={"recipe_id": "mocked_recipe_id"},
-            expected_message= "Modèle de collection manquant."
+            expected_message= "Nom de la collection manquant."
             )
     
     @patch.object(utils, path.GET_LOGGED_USER)
-    def test_check_request_validity_model_name_unvalid(self, mock_get_logged_user):
+    def test_check_request_validity_collection_name_unvalid(self, mock_get_logged_user):
         mock_get_logged_user.return_value = "mocked_user"
         params = {
             "recipe_id": "mocked_recipe_id",
-            "model_name": "unvalid_model_name"
+            "collection_name": "unvalid_collection_name"
         }
 
         self.check_status_code_400_message(
             params=params,
-            expected_message= f"Le modèle 'unvalid_model_name' est inconnu."
+            expected_message= f"Le modèle 'unvalid_collection_name' est inconnu."
             )
     
     @patch.object(utils, path.GET_LOGGED_USER)
@@ -246,27 +240,41 @@ class CheckRequestValidityTest(TestCase):
             "recipe_id": "mocked_repipe_id",
         }
 
-        for model_name in MODEL_MAP:
-            params["model_name"] = model_name
-            self.request = self.factory.post("/", params)
-            logged_user, recipe_id, model, json_response = check_request_validity(self.request)
+        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
+            params["collection_name"] = collection_name
+            request = self.factory.post("/", params)
+            logged_user, recipe_id, collection_name, json_response = check_request_validity(request)
             
             self.assertIsNone(json_response)
             self.assertEqual(logged_user, "mocked_user")
             self.assertEqual(recipe_id, "mocked_repipe_id")
-            self.assertEqual(model, MODEL_MAP.get(model_name))
+            self.assertIn(collection_name, dict(RecipeCollectionEntry.COLLECTION_CHOICES).keys())
 
-class ManageCollectionTest(TestCase):
+class UpdateCollectionTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="test_user", password="password")
         self.recipe = Recipe.objects.create(title="recette test", category="plat")
         self.factory = RequestFactory()
+
     
-    def _test_manage_collection(self, action, model, mocked_request_validity_json, expected_message, expected_status):
-         with patch.object(utils, path.CHECK_REQUEST_VALIDITY) as mock_check_request_validity:
-            mock_check_request_validity.return_value = self.member, self.recipe.id, model, mocked_request_validity_json
-            self.request = self.factory.post("/")
-            json_response = manage_collection(self.request, action=action)
+    def test_update_collection_collection_name_missing(self):
+        mocked_request_validity_json = JsonResponse({"message": "Nom de la collection manquant."}, status=400)
+        for action in ["add", "remove"]:
+             for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
+                self._test_update_collection(
+                    action=action,
+                    collection_name=collection_name,
+                    mocked_request_validity_json=mocked_request_validity_json,
+                    expected_message="Nom de la collection manquant.",
+                    expected_status=400
+                )
+            
+    def _test_update_collection(self, action, collection_name, mocked_request_validity_json, expected_message, expected_status):
+        with patch.object(utils, path.CHECK_REQUEST_VALIDITY) as mock_check_request_validity:
+            mock_check_request_validity.return_value = self.member, self.recipe.id, collection_name, mocked_request_validity_json
+            
+            request = self.factory.post("/")
+            json_response = update_collection(request, action=action)
 
             self.assertIsNotNone(json_response)
             self.assertIsInstance(json_response, JsonResponse)
@@ -276,70 +284,65 @@ class ManageCollectionTest(TestCase):
             self.assertEqual(json_response.status_code, expected_status)
             self.assertIn(expected_message, response_data["message"])
 
-    def test_manage_collection_invalid_action(self):
-        for model in MODEL_MAP.values():
-            self._test_manage_collection(
-                    action="invalid_action",
-                    model=model,
-                    mocked_request_validity_json=None,
-                    expected_message="Une erreur est survenue: 'Action non valide'.",
-                    expected_status=400
-                )
-    
-    def test_manage_collection_error_response(self):
-        mocked_request_validity_json = JsonResponse({"message": "Modèle de collection manquant."}, status=400)
-        for action in ["add", "remove"]:
-             for model in MODEL_MAP.values():
-                self._test_manage_collection(
-                    action=action,
-                    model=model,
-                    mocked_request_validity_json=mocked_request_validity_json,
-                    expected_message="Modèle de collection manquant.",
-                    expected_status=400
-                )
-    
-    def test_manage_collection_add_recipe_success(self):
-        for model in MODEL_MAP.values():
-                self._test_manage_collection(
-                    action="add",
-                    model=model,
-                    mocked_request_validity_json=None,
-                    expected_message=f"La recette a été ajoutée à votre {model.title}.",
-                    expected_status=200
-                )
+    def test_update_collection_cases_1(self):
+        for collection_name, collection_title in RecipeCollectionEntry.COLLECTION_CHOICES:
+            params_list = [
+                {
+                    "action": "invalid_action",
+                    "collection_name": collection_name,
+                    "mocked_request_validity_json": None,
+                    "expected_message": "Une erreur est survenue: 'Action non valide'.",
+                    "expected_status": 400,
+                },
+                {
+                    "action": "add",
+                    "collection_name": collection_name,
+                    "mocked_request_validity_json": None,
+                    "expected_message": f"La recette a été ajoutée à votre {collection_title}.",
+                    "expected_status": 200
+                },
+                {   
+                    "action": "remove",
+                    "collection_name": collection_name,
+                    "mocked_request_validity_json": None,
+                    "expected_message": f"La recette ne fait pas partie de votre {collection_title}.",
+                    "expected_status": 200
+                }
+            ]
 
-    def test_manage_collection_add_recipe_already_exists(self):
-        for model in MODEL_MAP.values():
-            model.objects.create(member=self.member, recipe_id=self.recipe.id)
-            self._test_manage_collection(
-                action="add",
-                model=model,
-                mocked_request_validity_json=None,
-                expected_message=f"La recette fait déjà partie de votre {model.title}.",
-                expected_status=200
-                )
+            for params in params_list:
+                with self.subTest():
+                    self._test_update_collection(**params)
+                    RecipeCollectionEntry.objects.all().delete()
 
-    def test_remove_from_collection(self):
-        for model in MODEL_MAP.values():
-            model.objects.create(member=self.member, recipe_id=self.recipe.id)
-            self._test_manage_collection(
-                action="remove",
-                model=model,
-                mocked_request_validity_json=None,
-                expected_message=f"La recette a été supprimée de votre {model.title}.",
-                expected_status=200
-                )
-
-    def test_remove_from_collection_not_exists(self):
-        for model in MODEL_MAP.values():
-            self._test_manage_collection(
-                action="remove",
-                model=model,
-                mocked_request_validity_json=None,
-                expected_message= f"La recette ne fait pas partie de votre {model.title}.",
-                expected_status=200
-                )
-            
+    def test_update_collection_cases_2(self):
+        for collection_name, collection_title in RecipeCollectionEntry.COLLECTION_CHOICES:
+            params_list = [
+                {
+                    "action": "add",
+                    "collection_name": collection_name,
+                    "mocked_request_validity_json": None,
+                    "expected_message": f"La recette fait déjà partie de votre {collection_title}.",
+                    "expected_status": 200,
+                },
+                {
+                    "action": "remove",
+                    "collection_name": collection_name,
+                    "mocked_request_validity_json": None,
+                    "expected_message": f"La recette a été supprimée de votre {collection_title}.",
+                    "expected_status": 200
+                }
+            ]
+            for params in params_list:
+                with self.subTest():
+                    RecipeCollectionEntry.objects.create(
+                    collection_name=collection_name,
+                    member=self.member,
+                    recipe_id=self.recipe.id
+                    )
+                    self._test_update_collection(**params)
+                    RecipeCollectionEntry.objects.all().delete()
+                
 class PrepareRecipeFormsTest(TestCase):
     @patch.object(utils, path.INITIALIZE_FORM)
     @patch.object(utils, path.INITIALIZE_COMBINED_FORM)
@@ -400,81 +403,73 @@ class SaveRecipeAndIngredientsTest(TestCase):
         recipe = save_recipe_and_ingredients(self.recipe_form, self.recipe_ingredient_form_list)
         self.assertIn(recipe, Recipe.objects.all())
 
-class AddRecipeCollectionIfCheckedTest(TestCase):
+class AddRecipeToCollectionIfCheckedTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="test_user", password="password")
         self.recipe = Recipe.objects.create(title="recette test", category="plat")
 
-    def _test_add_recipe_to_collection_if_checked(self, manage_collection_form_data):
-        manage_collection_form = ManageCollectionForm(manage_collection_form_data)
-        manage_collection_form.is_valid()
+    def _test_add_recipe_to_collection_if_checked(self, add_recipe_to_collection_form_data):
+        add_recipe_to_collection_form = AddRecipeToCollectionForm(add_recipe_to_collection_form_data)
+        add_recipe_to_collection_form.is_valid()
         
-        for model, action in ManageCollectionForm.MODEL_ACTION_MAPPING.items():
-            if manage_collection_form_data.get(action)==True:
-                self.assertTrue(
-                    add_recipe_to_collection_if_checked(
-                        manage_collection_form,
-                        model,
+        for collection_name, action in AddRecipeToCollectionForm.COLLECTION_NAME_MAPPING.items():
+            added = add_recipe_to_collection_if_checked(
+                        add_recipe_to_collection_form,
+                        collection_name,
                         self.member,
                         self.recipe
                     )
-                )             
-                self.assertTrue(model.objects.filter(member=self.member, recipe=self.recipe).exists())
-            else:
-                self.assertFalse(
-                    add_recipe_to_collection_if_checked(
-                        manage_collection_form,
-                        model,
-                        self.member,
-                        self.recipe
-                    )
-                )
-                self.assertFalse(model.objects.filter(member=self.member, recipe=self.recipe).exists())
+            recipe_collection_exist = RecipeCollectionEntry.objects.filter(
+                    collection_name=collection_name,
+                    member=self.member,
+                    recipe=self.recipe
+                    ).exists()
+            self.assertEqual(added, recipe_collection_exist)
 
     def test_add_recipe_to_collection_if_checked_case1(self):
-        manage_collection_form_data = {"add_to_history": True}
-        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+        add_recipe_to_collection_form = {"add_to_history": True}
+        self._test_add_recipe_to_collection_if_checked(add_recipe_to_collection_form)
     
     def test_add_recipe_to_collection_if_checked_case2(self):
-        manage_collection_form_data = {
+        add_recipe_to_collection_form = {
             "add_to_history": True,
             "add_to_album": True
             }
-        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+        self._test_add_recipe_to_collection_if_checked(add_recipe_to_collection_form)
     
     def test_add_recipe_to_collection_if_checked_case3(self):
-        manage_collection_form_data = {
+        add_recipe_to_collection_form = {
             }
-        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+        self._test_add_recipe_to_collection_if_checked(add_recipe_to_collection_form)
     
     def test_add_recipe_to_collection_if_checked_case4(self):
-        manage_collection_form_data = {
+        add_recipe_to_collection_form = {
             "add_to_history": True,
             "add_to_album": True,
             "add_to_recipe_to_try": True,
             }
-        self._test_add_recipe_to_collection_if_checked(manage_collection_form_data)
+        self._test_add_recipe_to_collection_if_checked(add_recipe_to_collection_form)
 
-class HandleRecipeCQollectionsTest(TestCase):
+class LinkRecipeToCollectionsTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.request = self.factory.post("/")
         setattr(self.request, "session", {})
         setattr(self.request, "_messages", FallbackStorage(self.request))
     
-    def mock_add_recipe_to_album(self, manage_recipe_collection_form, model, logged_user, recipe):
-        if model == RecipeAlbumEntry:
+    def mock_add_recipe_to_album(self, add_recipe_to_collection_form, model_name, logged_user, recipe):
+        if model_name == "album":
             return True
         return False
     
     @patch.object(utils, path.ADD_RECIPE_TO_COLLECTION_IF_CHECKED)
     def test_handle_recipe_collections_add_to_album(self, mock_add_recipe_to_collection_if_checked):
         mock_add_recipe_to_collection_if_checked.side_effect = self.mock_add_recipe_to_album
-        mock_manage_recipe_collection_form = "mock_manage_recipe_collection_form"
+        mock_add_recipe_to_collection_form = "mock_add_recipe_to_collection_form"
         mock_logged_user = "mock_logged_user"
         mock_recipe = "mock_recipe"
-        handle_recipe_collections(
-            mock_manage_recipe_collection_form,
+        link_recipe_to_collections(
+            mock_add_recipe_to_collection_form,
             mock_logged_user,
             mock_recipe,
             self.request
@@ -482,34 +477,37 @@ class HandleRecipeCQollectionsTest(TestCase):
 
         messages_list = list(get_messages(self.request))
         self.assertEqual(len(messages_list), 1)
-        self.assertTrue(f"Recette ajoutée à votre {RecipeAlbumEntry.title}" in messages_list[0].message)
+        collection_title = dict(RecipeCollectionEntry.COLLECTION_CHOICES).get("album")
+        self.assertTrue(
+            f"Recette ajoutée à votre {collection_title}" in messages_list[0].message
+            )
 
     @patch.object(utils, path.ADD_RECIPE_TO_COLLECTION_IF_CHECKED)
     def test_handle_recipe_collections_add_to_all_collection(self, mock_add_recipe_to_collection_if_checked):
         mock_add_recipe_to_collection_if_checked.return_value = True
-        mock_manage_recipe_collection_form = "mock_manage_recipe_collection_form"
+        mock_add_recipe_to_collection_form = "mock_add_recipe_to_collection_form"
         mock_logged_user = "mock_logged_user"
         mock_recipe = "mock_recipe"
-        handle_recipe_collections(
-            mock_manage_recipe_collection_form,
+        link_recipe_to_collections(
+            mock_add_recipe_to_collection_form,
             mock_logged_user,
             mock_recipe,
             self.request
             )
 
         messages_list = list(get_messages(self.request))
-        self.assertEqual(len(messages_list), len(MODEL_MAP))
-        for model in MODEL_MAP.values():
-            self.assertTrue(any(f"Recette ajoutée à votre {model.title}" in message.message for message in messages_list))
+        self.assertEqual(len(messages_list), len(RecipeCollectionEntry.COLLECTION_CHOICES))
+        for _, collection_title in RecipeCollectionEntry.COLLECTION_CHOICES:
+            self.assertTrue(any(f"Recette ajoutée à votre {collection_title}" in message.message for message in messages_list))
     
     @patch.object(utils, path.ADD_RECIPE_TO_COLLECTION_IF_CHECKED)
     def test_handle_recipe_collections_no_add(self, mock_add_recipe_to_collection_if_checked):
         mock_add_recipe_to_collection_if_checked.return_value = False
-        mock_manage_recipe_collection_form = "mock_manage_recipe_collection_form"
+        mock_add_recipe_to_collection_form = "mock_add_recipe_to_collection_form"
         mock_logged_user = "mock_logged_user"
         mock_recipe = "mock_recipe"
-        handle_recipe_collections(
-            mock_manage_recipe_collection_form,
+        link_recipe_to_collections(
+            mock_add_recipe_to_collection_form,
             mock_logged_user,
             mock_recipe,
             self.request
@@ -615,44 +613,29 @@ class GetIngredientInputsTest(TestCase):
 
         self.assertEqual(set(ingredient_inputs_dict.items()), set(zip(form_data.keys(), side_effect)))
 
-class FilterCollectionModelTest(TestCase):
-    def test_filter_collection_model_collection_name_none(self):
-        collection_model_list = filter_collection_model(None)
-
-        self.assertEqual(len(collection_model_list), 2)
-        self.assertEqual(set([RecipeAlbumEntry, RecipeHistoryEntry]), set(collection_model_list))
-    
-    def test_filter_collection_model_cases(self):
-        for collection_model_name, collection_model in MODEL_MAP.items():
-            if collection_model!= RecipeToTryEntry:
-                with self.subTest():
-                    collection_model_list = filter_collection_model(collection_model_name)
-                    self.assertEqual(len(collection_model_list), 1)
-                    self.assertIn(collection_model, collection_model_list)
-
 class FilterCollectionByMemberTest(TestCase):
     def setUp(self):
         self.logged_user = Member.objects.create(username="test_user", password="password")
         for recipe_title in ["recette logged user", "recette commune"]:
             recipe = Recipe.objects.create(title= recipe_title, category="plat")
-            RecipeAlbumEntry.objects.create(member=self.logged_user, recipe=recipe)
+            RecipeCollectionEntry.objects.create(collection_name="album", member=self.logged_user, recipe=recipe)
         self.generic_expected_recipe_title_list = ["recette commune"]
         self.shared_recipe = Recipe.objects.get(title="recette commune")
         
         for ind in range(1, 3):
             friend  = Member.objects.create(username=f"test_friend{ind}", password="password")
             recipe = Recipe.objects.create(title=f"recette friend{ind}", category="plat")
-            for model_collection in [RecipeAlbumEntry, RecipeHistoryEntry]:
-                model_collection.objects.create(member=friend, recipe=recipe)
-                model_collection.objects.create(member=friend, recipe=self.shared_recipe)
+            for model_name in ["album", "history"]:
+                RecipeCollectionEntry.objects.create(collection_name=model_name, member=friend, recipe=recipe)
+                RecipeCollectionEntry.objects.create(collection_name=model_name, member=friend, recipe=self.shared_recipe)
             self.logged_user.friends.add(friend)
             self.generic_expected_recipe_title_list.append(f"recette friend{ind}")
     
-    def _test_filter_by_member(self, member, expected_qs_length, recipe_title_to_add):
-        recipe_qs = filter_by_member(
+    def _test_filter_collection_by_member(self, member, expected_qs_length, recipe_title_to_add):
+        recipe_qs = filter_collection_by_member(
             logged_user=self.logged_user,
             member=member,
-            collection_model_list=[RecipeAlbumEntry, RecipeHistoryEntry]
+            recipe_collection_qs=RecipeCollectionEntry.objects.filter(collection_name__in=["album", "history"])
             )
         self.assertEqual(len(recipe_qs), expected_qs_length)
         expected_recipe_title_list = self.generic_expected_recipe_title_list.copy()
@@ -660,11 +643,11 @@ class FilterCollectionByMemberTest(TestCase):
              expected_recipe_title_list.append(recipe_title_to_add)
         self.assertEqual(len(recipe_qs.filter(title__in=expected_recipe_title_list)), expected_qs_length)
     
-    def test_filter_by_member_equal_friends(self):
-        self._test_filter_by_member(member="friends", expected_qs_length=3, recipe_title_to_add=None)
+    def test_filter_collection_by_member_equal_friends(self):
+        self._test_filter_collection_by_member(member="friends", expected_qs_length=3, recipe_title_to_add=None)
     
     def test_filter_by_member_equal_empty(self):
-        self._test_filter_by_member(member="", expected_qs_length=4, recipe_title_to_add="recette logged user")
+        self._test_filter_collection_by_member(member="", expected_qs_length=4, recipe_title_to_add="recette logged user")
 
 class HandleSearchRecipeRequestTest(TestCase):
     def setUp(self):
@@ -686,16 +669,14 @@ class HandleSearchRecipeRequestTest(TestCase):
         self.assertIsInstance(form, SearchRecipeForm)
         self.assertIn("category", form.errors)
     
-    @patch.object(utils, path.FILTER_BY_MEMBER)
-    @patch.object(utils, path.FILTER_COLLECTION_MODEL)
+    @patch.object(utils, path.FILTER_COLLECTION_BY_MEMBER)
     @patch.object(utils, path.GET_INGREDIENT_INPUTS)
-    def test_handle_search_form_cases(self, mock_get_ingredient_inputs, mock_filter_collection_model, mock_filter_by_member):
+    def test_handle_search_form_cases(self, mock_get_ingredient_inputs, mock_filter_collection_by_member):
         for (ingredient_1, title) in [("carotte", ""), ("", "recette plat_1")]:
             with self.subTest():
                 mock_ingredient_imputs_dict = {"ingredient_1": ingredient_1}
                 mock_get_ingredient_inputs.return_value = mock_ingredient_imputs_dict
-                mock_filter_collection_model.return_value = "mock_collection_model"
-                mock_filter_by_member.return_value = Recipe.objects.all()
+                mock_filter_collection_by_member.return_value = Recipe.objects.all()
                 
                 request = self.factory.get("/", {"title": title, "ingredient_1": ingredient_1})
                 form, recipe_qs = handle_search_recipe_request(request, self.member)
@@ -719,32 +700,39 @@ class GetMemberRecipeCollectionEntriesTest(TestCase):
         self.recipe1 = Recipe.objects.create(title="Recette 1", category="plat")
         self.recipe2 = Recipe.objects.create(title="Recette 2", category="plat")
 
-        for model in MODEL_MAP.values():
-            model.objects.create(
-                member=self.member, recipe=self.recipe1, saving_date="2025-02-01"
+        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
+            RecipeCollectionEntry.objects.create(
+                collection_name=collection_name,
+                member=self.member,
+                recipe=self.recipe1,
+                saving_date="2025-02-01"
             )
-            model.objects.create(
-                member=self.member, recipe=self.recipe2, saving_date="2025-02-02"
+            RecipeCollectionEntry.objects.create(
+                collection_name=collection_name,
+                member=self.member,
+                recipe=self.recipe2,
+                saving_date="2025-02-02"
             )
 
+
     def test_get_member_recipe_collection_entries_with_recipe_history(self):
-        entries = get_member_recipe_collection_entries(RecipeHistoryEntry, self.member)
+        entries = get_member_recipe_collection_entries("history", self.member)
         expected_entries_list = [
-            RecipeHistoryEntry.objects.get(saving_date="2025-02-02"),
-            RecipeHistoryEntry.objects.get(saving_date="2025-02-01")
+            RecipeCollectionEntry.objects.get(collection_name="history", saving_date="2025-02-02"),
+            RecipeCollectionEntry.objects.get(collection_name="history", saving_date="2025-02-01")
         ]
         self.assertEqual(list(entries), expected_entries_list)
 
     def test_get_member_recipe_collection_entries_with_other_model(self):
-        for model in [RecipeAlbumEntry, RecipeToTryEntry]:
+        for collection_name in ["album", "trials"]:
             expected_entries_list = [
-            model.objects.get(recipe__title="Recette 1"),
-            model.objects.get(recipe__title="Recette 2")
-        ]
+                RecipeCollectionEntry.objects.get(collection_name=collection_name, recipe__title="Recette 1"),
+                RecipeCollectionEntry.objects.get(collection_name=collection_name, recipe__title="Recette 2")
+            ]
             with self.subTest():
-                entries = get_member_recipe_collection_entries(model, self.member)
+                entries = get_member_recipe_collection_entries(collection_name, self.member)
                 self.assertEqual(list(entries), expected_entries_list)
-                print(f"\nTested {model.__name__}")
+                print(f"\nTested {collection_name}")
 
 class FilterMemberRecipeCollection(TestCase):
     def setUp(self):
@@ -757,12 +745,18 @@ class FilterMemberRecipeCollection(TestCase):
         self.recipe2.recipe_ingredient.add(recipe_ingredient)
         self.recipe3.recipe_ingredient.add(recipe_ingredient)
 
-        for model in MODEL_MAP.values():
-            model.objects.create(
-                member=self.member, recipe=self.recipe1, saving_date="2025-02-01"
+        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
+            RecipeCollectionEntry.objects.create(
+                collection_name=collection_name,
+                member=self.member,
+                recipe=self.recipe1,
+                saving_date="2025-02-01"
             )
-            model.objects.create(
-                member=self.member, recipe=self.recipe2, saving_date="2025-02-02"
+            RecipeCollectionEntry.objects.create(
+                collection_name=collection_name,
+                member=self.member,
+                recipe=self.recipe2,
+                saving_date="2025-02-02"
             )
         self.factory = RequestFactory()
         
@@ -776,19 +770,21 @@ class FilterMemberRecipeCollection(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("member", form.errors)
         self.assertIn("This field is required", form.errors["member"][0])
-        self.assertIn("collection_model_name", form.errors)
-        self.assertIn("This field is required", form.errors["collection_model_name"][0])
+        self.assertIn("collection_name", form.errors)
+        self.assertIn("This field is required", form.errors["collection_name"][0])
     
-    def _test_filter_member_recipe_collection(self, partial_form_data, collection_model_name):
+    def _test_filter_member_recipe_collection(self, partial_form_data, collection_name):
         with patch.object(utils, path.GET_INGREDIENT_INPUTS) as mock_ingredient_inputs, \
         patch.object(utils, path.GET_MEMBER_RECIPE_COLLECTION_ENTRIES) as mock_get_member_recipe_collection_entries:
             mock_ingredient_inputs.return_value = {"ingredient_1": "carotte"}
-            collection_model = MODEL_MAP.get(collection_model_name)
-            mock_get_member_recipe_collection_entries.return_values = collection_model.objects.filter(member=self.member)
+            mock_get_member_recipe_collection_entries.return_values = RecipeCollectionEntry.objects.filter(
+                collection_name=collection_name,
+                member=self.member
+                )
             
             form_data = partial_form_data.copy()
             form_data["member"] = self.member
-            form_data["collection_model_name"] = collection_model_name
+            form_data["collection_name"] = collection_name
             request = self.factory.post("/", form_data)
             form, recipe_collection_entries = filter_member_recipe_collection(request)
 
@@ -796,7 +792,7 @@ class FilterMemberRecipeCollection(TestCase):
                 f"recipe__{key}" if "ingredient" not in key else "recipe__recipe_ingredient__ingredient__name": value
                 for key, value in partial_form_data.items()
             }
-            expected_recipe_collection_entries = collection_model.objects.filter(**filter_data)
+            expected_recipe_collection_entries = RecipeCollectionEntry.objects.filter(collection_name=collection_name, **filter_data)
 
             self.assertIsInstance(form, FilterRecipeCollectionForm)
             self.assertFalse(form.is_valid())
@@ -815,11 +811,11 @@ class FilterMemberRecipeCollection(TestCase):
                 "ingredient_1": "carottes"
              },
             ]):
-            for collection_model_name in MODEL_MAP:
+            for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
                 with self.subTest():
-                    print(f"\nTested partial_form{i}, model {collection_model_name}")
-                    self._test_filter_member_recipe_collection(partial_form_data, collection_model_name)
-                    print(f"\nTested partial_form{i}, model {collection_model_name}")
+                    print(f"\nTested partial_form{i}, {collection_name}")
+                    self._test_filter_member_recipe_collection(partial_form_data, collection_name)
+                    print(f"\nTested partial_form{i}, {collection_name}")
 
 
 

@@ -15,14 +15,8 @@ from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from recipe_journal.forms import RecipeIngredientForm, CreateRecipeHistoryForm, DeleteRecipeHistoryForm
-from recipe_journal.models import Member, Recipe, RecipeHistoryEntry, RecipeAlbumEntry, RecipeToTryEntry
+from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 import recipe_journal.utils.utils as ut
-
-MODEL_MAP = {
-            "RecipeAlbumEntry": RecipeAlbumEntry,
-            "RecipeToTryEntry": RecipeToTryEntry,
-            "RecipeHistoryEntry": RecipeHistoryEntry
-        }
 
 @require_http_methods(["GET"])
 def check_title(request):
@@ -66,21 +60,25 @@ def add_ingredient_form(request):
 
 @require_http_methods(["POST"])
 def check_collection_status(request):
-    logged_user, recipe_id, model, error_response = ut.check_request_validity(request)
+    logged_user, recipe_id, collection_name, error_response = ut.check_request_validity(request)
     if error_response:
         return error_response
   
-    is_in_collection = model.objects.filter(member=logged_user, recipe_id=recipe_id).exists()
+    is_in_collection = RecipeCollectionEntry.objects.filter(
+        collection_name=collection_name,
+        member=logged_user,
+        recipe_id=recipe_id
+        ).exists()
 
     return JsonResponse({"is_in_collection": is_in_collection})
 
 @require_http_methods(["POST"])
 def add_to_collection(request):
-    return ut.manage_collection(request, "add")
+    return ut.update_collection(request, "add")
 
 @require_http_methods(["POST"])
 def remove_from_collection(request):
-    return ut.manage_collection(request, "remove")
+    return ut.update_collection(request, "remove")
 
 @require_http_methods(["POST"])
 def add_recipe_history(request):
@@ -98,6 +96,7 @@ def add_recipe_history(request):
     if form.is_valid():
         form.save()
         return JsonResponse({"success": True})
+    print(form.errors)
     return JsonResponse({"success": False, "errors": form.errors})
     
 @require_http_methods(["POST"])
@@ -119,8 +118,11 @@ def remove_recipe_history(request):
     if form.is_valid():
         recipe_history_entry_date = form.cleaned_data["recipe_history_entry_date"]
 
-        count, _ = RecipeHistoryEntry.objects.filter(
-            member=form.member, recipe=form.recipe, saving_date=recipe_history_entry_date
+        count, _ = RecipeCollectionEntry.objects.filter(
+            collection_name="history",
+            member=form.member,
+            recipe=form.recipe,
+            saving_date=recipe_history_entry_date
         ).delete()
 
         form_html = DeleteRecipeHistoryForm(member=member, recipe=recipe).as_p()

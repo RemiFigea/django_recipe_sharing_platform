@@ -11,13 +11,6 @@ import shutil
 import tempfile
 from unittest.mock import patch
 
-MODEL_MAP = {
-        "RecipeAlbumEntry": RecipeAlbumEntry,
-        "RecipeToTryEntry": RecipeToTryEntry,
-        "RecipeHistoryEntry": RecipeHistoryEntry
-    }
-
-
 class LoginFormTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="testuser", password=make_password("password123"))
@@ -135,13 +128,13 @@ class RecipeActionFormTest(TestCase):
         form_data = {
             "add_to_history": True,
             "add_to_album": False,
-            "add_to_recipe_to_try": True,
+            "add_to_trials": True,
         }
-        form = ManageCollectionForm(data=form_data)
+        form = AddRecipeToCollectionForm(data=form_data)
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["add_to_history"], True)
         self.assertEqual(form.cleaned_data["add_to_album"], False)
-        self.assertEqual(form.cleaned_data["add_to_recipe_to_try"], True)
+        self.assertEqual(form.cleaned_data["add_to_trials"], True)
 
 class AddMainRecipeFormTest(TestCase):
     def test_form_valid(self):
@@ -249,7 +242,7 @@ class ManageCollectionFormTest(TestCase):
             "add_to_history" : False,
             "add_to_recipe_to_try" : False,
         }
-        form = ManageCollectionForm(data=form_data)
+        form = AddRecipeToCollectionForm(data=form_data)
 
         self.assertFalse(form.is_valid())
         self.assertIn("Vous devez cocher au moins une option.", form.non_field_errors())
@@ -260,7 +253,7 @@ class ManageCollectionFormTest(TestCase):
             "add_to_history" : True,
             "add_to_recipe_to_try" : True,
         }
-        form = ManageCollectionForm(data=form_data)
+        form = AddRecipeToCollectionForm(data=form_data)
 
         self.assertTrue(form.is_valid())
 
@@ -302,7 +295,8 @@ class CreateRecipeHistoryFormTest(TestCase):
         self.assertTrue(form.is_valid())
     
     def test_form_recipe_already_in_history(self):
-        RecipeHistoryEntry.objects.create(
+        RecipeCollectionEntry.objects.create(
+            collection_name = "history",
             member = self.member,
             recipe = self.recipe,
             saving_date = date.today()
@@ -326,7 +320,8 @@ class DeleteRecipeHistoryFormTest(TestCase):
         self.recipe = Recipe.objects.create(title = "recette test", category = "dessert")
         self.recipe_2 = Recipe.objects.create(title = "recette test 2", category = "dessert")
         for day_delta in range(2):
-            RecipeHistoryEntry.objects.create(
+            RecipeCollectionEntry.objects.create(
+                collection_name = "history",
                 member = self.member,
                 recipe = self.recipe,
                 saving_date = date.today()- timedelta(days=day_delta)
@@ -349,15 +344,13 @@ class DeleteRecipeHistoryFormTest(TestCase):
         self.assertIn("Select a valid choice", form.errors["recipe_history_entry_date"][0])
 
 class SearchRecipeFormTest(TestCase):
-    def test_search_recipe_collection_RecipeHistoryEntry(self):
-        form = SearchRecipeForm({"collection": "RecipeHistoryEntry"})
-
-        self.assertTrue(form.is_valid())
-
-    def test_search_recipe_collection_RecipeAlbumEntry(self):
-        form = SearchRecipeForm({"collection": "RecipeAlbumEntry"})
-
-        self.assertTrue(form.is_valid())
+    def test_search_recipe_collection_cases(self):
+        collection_choices = dict(RecipeCollectionEntry.COLLECTION_CHOICES)
+        for collection_name in collection_choices:
+            if collection_name != "trials":
+                with self.subTest():
+                    form = SearchRecipeForm({"collection": collection_name})
+                    self.assertTrue(form.is_valid())
     
     def test_search_recipe_member_choices_friends(self):
         form = SearchRecipeForm({"member_choices": "friends"})
@@ -368,35 +361,39 @@ class FilterRecipeCollectionTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(username="test_user", password=make_password("password123"))
     
-    def _test_filter_recipe_form(self, collection_model_name):
-        form = FilterRecipeCollectionForm({"collection_model_name": collection_model_name, "member": self.member})
+    def _test_filter_recipe_form(self, collection_name):
+        form = FilterRecipeCollectionForm({"collection_name": collection_name, "member": self.member})
         self.assertTrue(form.is_valid())
     
-    def test_filter_recipe_form_cases(self):
-        for collection_model_name in MODEL_MAP:
+    def test_filter_recipe_form_success_cases(self):
+        for collection_name in dict(RecipeCollectionEntry.COLLECTION_CHOICES):
             with self.subTest():
-                self._test_filter_recipe_form(collection_model_name)
-                print(f"\nTested {collection_model_name}")
+                self._test_filter_recipe_form(collection_name)
+                print(f"\nTested {collection_name}")
 
-    def test_filter_recipe_form_no_collection_model(self):
+    def test_filter_recipe_form_no_collection_name(self):
         form = FilterRecipeCollectionForm({"member": self.member})
 
         self.assertFalse(form.is_valid())
-        self.assertIn("collection_model_name", form.errors)
-        self.assertTrue(any("This field is required" in error_msg for error_msg in form.errors["collection_model_name"]))
+        self.assertIn("collection_name", form.errors)
+        self.assertTrue(any("This field is required" in error_msg for error_msg in form.errors["collection_name"]))
     
-    def test_filter_recipe_form_no_member(self):
-        form = FilterRecipeCollectionForm({"collection_model_name": "RecipeToTryEntry"})
+    def test_filter_recipe_form_no_member_cases(self):
+         for collection_name in dict(RecipeCollectionEntry.COLLECTION_CHOICES):
+            with self.subTest():
+                form = FilterRecipeCollectionForm({"collection_name": collection_name})
 
-        self.assertFalse(form.is_valid())
-        self.assertIn("member", form.errors)
-        self.assertTrue(any("This field is required" in error_msg for error_msg in form.errors["member"]))
+                self.assertFalse(form.is_valid())
+                self.assertIn("member", form.errors)
+                self.assertTrue(any("This field is required" in error_msg for error_msg in form.errors["member"]))
     
-    def test_collection_model_choices_match_model_map(self):
-        form_choices = {choice[0] for choice in FilterRecipeCollectionForm.collection_choices}
-        model_map_keys = set(MODEL_MAP.keys())
-
-        self.assertSetEqual(form_choices, model_map_keys, "Les choix du formulaire ne correspondent pas exactement aux clés de MODEL_MAP")
+    def test_form_collection_name_choices_match_model_collection_name(self):
+        form = FilterRecipeCollectionForm()
+        self.assertSetEqual(
+            set(form.fields["collection_name"].choices),
+            set(RecipeCollectionEntry.COLLECTION_CHOICES),
+            "Les choix du formulaire ne correspondent pas exactement aux choix du modèle."
+            )
 
 
 

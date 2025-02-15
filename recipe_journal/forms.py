@@ -18,7 +18,7 @@ Forms included:
 """
 from django.contrib.auth.hashers import check_password, make_password
 from django import forms
-from recipe_journal.models import Ingredient, Member, Recipe, RecipeAlbumEntry, RecipeHistoryEntry, RecipeIngredient, RecipeToTryEntry
+from recipe_journal.models import Ingredient, Member, Recipe, RecipeCollectionEntry, RecipeIngredient
 
 class LoginForm(forms.Form):
     """
@@ -314,16 +314,16 @@ class RecipeIngredientForm(forms.ModelForm):
 
         return instance
     
-class ManageCollectionForm(forms.Form):
+class AddRecipeToCollectionForm(forms.Form):
     """
     Form to manage the actions of adding a recipe to various collections 
     (album, history, to-try list).
     Ensures that at least one collection is selected by the user.
     """
-    MODEL_ACTION_MAPPING = {
-        RecipeAlbumEntry: "add_to_album",
-        RecipeHistoryEntry: "add_to_history",
-        RecipeToTryEntry: "add_to_recipe_to_try"        
+    COLLECTION_NAME_MAPPING = {
+        "album": "add_to_album",
+        "history": "add_to_history",
+        "trials": "add_to_recipe_to_try"        
     }
 
     add_to_album = forms.BooleanField(
@@ -340,7 +340,7 @@ class ManageCollectionForm(forms.Form):
         label="Ajouter la recette à mon historique",
         label_suffix="",
     )
-    add_to_recipe_to_try = forms.BooleanField(
+    add_to_trials = forms.BooleanField(
         required=False,
         initial= False,
         widget=forms.CheckboxInput,
@@ -355,9 +355,9 @@ class ManageCollectionForm(forms.Form):
         cleaned_data = super().clean()
         add_to_album = cleaned_data.get("add_to_album")
         add_to_history = cleaned_data.get("add_to_history")
-        add_to_recipe_to_try = cleaned_data.get("add_to_recipe_to_try")
+        add_to_trials = cleaned_data.get("add_to_trials")
 
-        if not (add_to_album or add_to_history or add_to_recipe_to_try):
+        if not (add_to_album or add_to_history or add_to_trials):
             raise forms.ValidationError("Vous devez cocher au moins une option.")
         
         return cleaned_data
@@ -396,16 +396,25 @@ class AddFriendForm(forms.Form):
 
 class CreateRecipeHistoryForm(forms.ModelForm):
     class Meta:
-        model = RecipeHistoryEntry
-        fields = ["member", "recipe", "saving_date", "personal_note"]
+        model = RecipeCollectionEntry
+        fields = ["collection_name", "member", "recipe", "saving_date", "personal_note"]
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["collection_name"].initial = "history"
+        self.fields["collection_name"].widget = forms.HiddenInput()
+        self.fields["collection_name"].required = False
 
     def clean(self):
         cleaned_data = super().clean()
+        cleaned_data["collection_name"] = "history"
         saving_date = cleaned_data.get("saving_date")
         member = cleaned_data.get("member")
         recipe = cleaned_data.get("recipe")
 
-        if RecipeHistoryEntry.objects.filter(
+
+        if RecipeCollectionEntry.objects.filter(
+            collection_name="history",
             member=member,
             recipe=recipe,
             saving_date=saving_date
@@ -422,7 +431,7 @@ class DeleteRecipeHistoryForm(forms.Form):
         self.date_choices = []
 
         if member and recipe:
-            queryset = RecipeHistoryEntry.objects.filter(member=member, recipe=recipe)
+            queryset = RecipeCollectionEntry.objects.filter(collection_name="history", member=member, recipe=recipe)
             dates = queryset.values_list("saving_date", flat=True).distinct()
             self.date_choices = [(date, date.strftime("%Y-%m-%d")) for date in dates]
 
@@ -433,11 +442,8 @@ class DeleteRecipeHistoryForm(forms.Form):
         )
 
 class SearchRecipeForm(forms.Form):
-    collection_choices = [
-        ("", "toutes"),
-        ("RecipeHistoryEntry", "historique de recettes"),
-        ("RecipeAlbumEntry", "album de recettes")
-    ]
+    collection_choices = [("", "toutes")] + \
+        [(key, value) for key, value in RecipeCollectionEntry.COLLECTION_CHOICES if value != "trials"]
 
     member_choices = [
         ("", "tous"),
@@ -453,17 +459,16 @@ class SearchRecipeForm(forms.Form):
     ingredient_3 = forms.CharField(label="ingredient 3:", required=False)
 
 class FilterRecipeCollectionForm(forms.Form):
-    collection_choices = [
-        ("RecipeToTryEntry", "recette à essayer"),
-        ("RecipeHistoryEntry", "historique de recettes"),
-        ("RecipeAlbumEntry", "album de recettes")
-    ]
 
     title = forms.CharField(label="titre de la recette:", required=False)
-    category = forms.ChoiceField(label="type de plat:", choices=[("", "tous")] + Recipe.CATEGORY_CHOICES, required=False)
-    collection_model_name = forms.ChoiceField(
-        label="Collection :",
-        choices=collection_choices,
+    category = forms.ChoiceField(
+        label="type de plat:",
+        choices=[("", "tous")] + Recipe.CATEGORY_CHOICES,
+        required=False
+        )
+    collection_name = forms.ChoiceField(
+        label="collection :",
+        choices=RecipeCollectionEntry.COLLECTION_CHOICES,
         required=True
     )
     member =  forms.ModelChoiceField(

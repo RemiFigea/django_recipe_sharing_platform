@@ -86,46 +86,49 @@ class Ingredient(models.Model):
     """   
     name = models.CharField(max_length=100, unique=True)
 
-class BaseRecipeCollectionEntry(models.Model):
+class RecipeCollectionEntry(models.Model):
     """
     Base class for recipe collection entries.
 
     Stores a member, recipe, saving date, and personal notes.
     """
-    # COLLECTION_TYPES = [
-    #     ("history", "Historique de recettes"),
-    #     ("album", "Album de recettes"),
-    #     ("trials", "Recettes à essayer")
-    # ]
+    COLLECTION_CHOICES = [
+        ("history", "historique de recettes"),
+        ("album", "album de recettes"),
+        ("trials", "liste de recettes à essayer")
+    ]
 
-    # collection_type = models.CharField(max_length=20, choices=COLLECTION_TYPES)
+    collection_name = models.CharField(max_length=20, choices=COLLECTION_CHOICES, null=False, blank=False, default="album")
     member = models.ForeignKey('Member', on_delete=models.CASCADE)
     recipe = models.ForeignKey('Recipe', on_delete=models.CASCADE)
     saving_date = models.DateField(default=date.today, null=False, blank=True)
-    personal_note = models.TextField(null=True, blank=True)
+    personal_note = models.TextField(null=True, blank=True)   
 
-    # def get_collection_name(self):
-    #     return self.__class__.__name__
+    def save(self, *args, **kwargs):
 
-    class Meta:
-        abstract = True
+        if self.collection_name == "history":
+            if RecipeCollectionEntry.objects.filter(
+                member=self.member,
+                recipe=self.recipe,
+                collection_name=self.collection_name,
+                saving_date=self.saving_date
+            ).exists():
+                raise ValueError("Cette recette a déjà été ajoutée à l'historique pour cette date.")
+        elif self.collection_name in ["album", "trials"]:
+                if RecipeCollectionEntry.objects.filter(
+                    member=self.member,
+                    recipe=self.recipe,
+                    collection_name=self.collection_name
+                ).exists():
+                    raise ValueError(f"La recette est déjà présente dans la collection {self.collection_name}.")
+        else:
+            raise ValueError(f"'{self.collection_name}' n'est pas un choix valide.")
+    
+        super().save(*args, **kwargs)
+    
 
-class RecipeAlbumEntry(BaseRecipeCollectionEntry):
-    """
-    Represents an entry in a member's recipe album.
-    """
-    title = "album de recettes"
+    def __str__(self):
+        return f'{self.recipe} in {self.collection_name} by {self.member}'
 
-class RecipeToTryEntry(BaseRecipeCollectionEntry):
-    """
-    Represents an entry in a member's list of recipes to try.
-    """
-    title = "liste de recettes à essayer"
-
-class RecipeHistoryEntry(BaseRecipeCollectionEntry):
-    """
-    Represents an entry in a member's recipe history.
-    """
-    title = "historique de recettes"
 
 

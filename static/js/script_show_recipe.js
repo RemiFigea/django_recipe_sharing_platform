@@ -1,17 +1,17 @@
 async function updateCollectionButton(dropdown, recipeId) {
-    const modelName = dropdown.getAttribute("model-name")
+    const collectionName = dropdown.getAttribute("collection-name")
     const collectionButton = dropdown.querySelector(".collection-button");
     const addToCollection = dropdown.querySelector(".add-to-collection");
     const removeFromCollection = dropdown.querySelector(".remove-from-collection");
 
-    if (!modelName || !collectionButton || !addToCollection || !removeFromCollection) {
+    if (!collectionName || !collectionButton || !addToCollection || !removeFromCollection) {
         console.error("Éléments manquants dans le dropdown.");
         return;
     }
     
     const requestData = {
         recipe_id: recipeId,
-        model_name: modelName
+        collection_name: collectionName
     };
     
 
@@ -23,7 +23,7 @@ async function updateCollectionButton(dropdown, recipeId) {
         if (data.is_in_collection) {
             collectionButton.style.opacity = "1";
             removeFromCollection.style.display = "block";
-            if (modelName !== "RecipeHistoryEntry") {
+            if (collectionName !== "history") {
                 addToCollection.style.display = "none";
             }
         } else {
@@ -61,12 +61,12 @@ async function handleCollectionUpdate(event, url) {
         return;
     }
     
-    const modelName = dropdown.getAttribute("model-name");
+    const collectionName = dropdown.getAttribute("collection-name");
 
-    if (modelName === "RecipeToTryEntry" || modelName === "RecipeAlbumEntry") {
+    if (collectionName === "trials" || collectionName === "album") {
         const requestData = {
             recipe_id: recipeId,
-            model_name: modelName
+            collection_name: collectionName
         };
 
         try {

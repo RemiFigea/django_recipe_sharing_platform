@@ -1,8 +1,8 @@
 """
-Unit tests for the views Django contained in the module api.py..
+Unit tests for the api.py module.
 """
 from datetime import date
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.test import TestCase
 from django.urls import reverse
 from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
@@ -13,8 +13,9 @@ from unittest.mock import patch
 path = MockFunctionPathManager()
 
 class CheckTitleTest(TestCase):
-    def check_status_code_200_error_list(self, params, expected_message_list):
+    def _test_check_title_return_status_code_200(self, params, expected_message_list):
         response = self.client.get(reverse("check_title"), params)
+        
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["error_list"], expected_message_list)
 
@@ -23,7 +24,7 @@ class CheckTitleTest(TestCase):
 
         self.assertEqual(response.status_code, 405)
 
-    def test_check_title_absent(self):
+    def test_check_title_without_title(self):
         response = self.client.get(reverse("check_title"))
 
         self.assertEqual(response.status_code, 400)
@@ -33,7 +34,7 @@ class CheckTitleTest(TestCase):
     def test_check_title_valid(self, mock_validate_title):
         mock_validate_title.return_value = None
 
-        self.check_status_code_200_error_list(
+        self._test_check_title_return_status_code_200(
             params={"title": "recette test"},
             expected_message_list=[]
             )
@@ -43,27 +44,27 @@ class CheckTitleTest(TestCase):
         mock_validate_title.return_value = None
         Recipe.objects.create(title="recette test")
 
-        self.check_status_code_200_error_list(
+        self._test_check_title_return_status_code_200(
             params={"title": "recette test"},
             expected_message_list=["Ce titre de recette est déjà utilisé!"]
             )
 
     @patch.object(ut, path.VALIDATE_TITLE)
-    def test_check_title_invalid_format(self, mock_validate_title):
+    def test_check_title_with_title_too_long(self, mock_validate_title):
         mock_validate_title.return_value = ["Titre trop long"]
         
-        self.check_status_code_200_error_list(
+        self._test_check_title_return_status_code_200(
             params={"title": 30*"title trop long"},
             expected_message_list=["Titre trop long"]
             )
 
 class AddIngredientFormTest(TestCase):
-    def test_add_ingredient_form_mehtod_post(self):
+    def test_add_ingredient_form_method_post(self):
         response = self.client.post(reverse("add_ingredient_form"))
 
         self.assertEqual(response.status_code, 405)
 
-    def test_add_ingredient_form_success(self):
+    def test_add_ingredient_form_method_get(self):
         response = self.client.get(reverse("add_ingredient_form"))
 
         self.assertEqual(response.status_code, 200)
@@ -80,39 +81,40 @@ class CheckCollectionStatusTest(TestCase):
         self.recipe = Recipe.objects.create(title="recette test", category="plat")
     
     @patch.object(ut, path.CHECK_REQUEST_VALIDITY)
-    def check_collection_status_error_response(self, mock_check_request_validity):
-        mock_check_request_validity.return_value= None, None, None, "mocked_error_response"
+    def test_check_collection_return_error_response(self, mock_check_request_validity):
+        mock_json_response = JsonResponse({"message": "mocked error message"}, status=400)
+        mock_check_request_validity.return_value= None, None, None,  mock_json_response
         response = self.client.post(reverse("check_collection_status"))
-
-        self.assertEqual(response, "mocked_error_response")
+        
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["message"], "mocked error message")
 
     @patch.object(ut, path.CHECK_REQUEST_VALIDITY)
-    def check_recipe_is_in_collection(self, mock_check_request_validity,  collection_name, expected_result):
+    def _test_check_collection(self, mock_check_request_validity,  collection_name, expected_result):
         mock_check_request_validity.return_value= self.member, self.recipe.id, collection_name, None
         response = self.client.post(reverse("check_collection_status"))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["is_in_collection"], expected_result)  
 
-    
     @patch.object(ut, path.GET_LOGGED_USER)
     def test_check_collection_is_in_collection_True(self, mock_get_logged_user):
         mock_get_logged_user.return_value =  self.member
 
-        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
+        for collection_name, _ in RecipeCollectionEntry.MODEL_COLLECTION_CHOICES:
             RecipeCollectionEntry.objects.create(
                 collection_name=collection_name,
                 member=self.member,
                 recipe=self.recipe
                 )
-            self.check_recipe_is_in_collection(collection_name=collection_name, expected_result=True)
+            self._test_check_collection(collection_name=collection_name, expected_result=True)
 
     @patch.object(ut, path.GET_LOGGED_USER)
     def test_check_collection_is_in_collection_False(self, mock_get_logged_user):
         mock_get_logged_user.return_value =  self.member
 
-        for collection_name, _ in RecipeCollectionEntry.COLLECTION_CHOICES:
-            self.check_recipe_is_in_collection(collection_name=collection_name, expected_result=False)
+        for collection_name, _ in RecipeCollectionEntry.MODEL_COLLECTION_CHOICES:
+            self._test_check_collection(collection_name=collection_name, expected_result=False)
 
 class UpdateCollectionTest(TestCase):
     def setUp(self):
@@ -125,7 +127,7 @@ class UpdateCollectionTest(TestCase):
 
             self.assertEqual(response.status_code, 405)
     
-    def test_update_collection_called(self):
+    def test_update_collection_method_post(self):
         for url_name, action in ("add_to_collection", "add"), ("remove_from_collection", "remove"):
             with patch.object(ut, path.UPDATE_COLLECTION) as mock_update_collection:
                 mock_update_collection.return_value = HttpResponse(status=200)
@@ -135,32 +137,30 @@ class UpdateCollectionTest(TestCase):
                 self.assertEqual(response.status_code, 200)
 
 class AddRecipeHistoryTest(TestCase):
-	def setUp(self):
-		self.member = Member.objects.create(username="test_user", password="password")
-		self.recipe = Recipe.objects.create(title="recette test", category="plat")
-        
-	def test_add_recipe_history_method_get(self):
-		response = self.client.get(reverse("add_recipe_history"))
-		self.assertEqual(response.status_code, 405)
+    def setUp(self):
+        self.member = Member.objects.create(username="test_user", password="password")
+        self.recipe = Recipe.objects.create(title="recette test", category="plat")
 
-	def test_add_recipe_history_form_valid(self):
-		form_data = {
-		"member": self.member.id,
-		"recipe": self.recipe.id,
-		}
-		response = self.client.post(reverse("add_recipe_history"), form_data)
+    def test_add_recipe_history_method_get(self):
+        response = self.client.get(reverse("add_recipe_history"))
 
-		self.assertEqual(response.status_code, 200)
-		self.assertIn("success", response.json())
-		self.assertTrue( response.json()["success"])
+        self.assertEqual(response.status_code, 405)
 
-	def test_add_recipe_history_form_invalid(self):
-		response = self.client.post(reverse("add_recipe_history"), {"member": self.member.id})
+    def test_add_recipe_history_form_valid(self):
+        form_data = {"member": self.member.id, "recipe": self.recipe.id}
+        response = self.client.post(reverse("add_recipe_history"), form_data)
 
-		self.assertEqual(response.status_code, 200)
-		self.assertIn("success", response.json())
-		self.assertFalse( response.json()["success"])
-		self.assertIn("errors", response.json())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("success", response.json())
+        self.assertTrue( response.json()["success"])
+
+    def test_add_recipe_history_form_invalid(self):
+        response = self.client.post(reverse("add_recipe_history"), {"member": self.member.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("success", response.json())
+        self.assertFalse( response.json()["success"])
+        self.assertIn("errors", response.json())
 
 class RemoveRecipeHistoryTest(TestCase):
     def setUp(self):
@@ -195,7 +195,6 @@ class RemoveRecipeHistoryTest(TestCase):
             recipe=self.recipe,
             saving_date= date.today()
         )
-
         form_data = {
             "member_id": self.member.id,
             "recipe_id": self.recipe.id,

@@ -1,17 +1,19 @@
-"""Module for managing recipes, forms, and user interactions."""
-
+"""
+Module for managing recipes, forms, and user interactions.
+"""
 from django import forms
 from django.contrib import messages
+from django.db.models import Min
 from django.forms import ValidationError
 from django.http import JsonResponse
 from recipe_journal.forms import  AddFriendForm, RecipeIngredientForm, RecipeCombinedForm
-from recipe_journal.forms import FilterRecipeCollectionForm, AddRecipeToCollectionForm, SearchRecipeForm
+from recipe_journal.forms import ShowRecipeCollectionForm, AddRecipeToCollectionForm, SearchRecipeForm
 from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 import random as rd
-# import spacy
+import spacy
 import time
 
-# nlp = spacy.load("fr_core_news_sm")
+nlp = spacy.load("fr_core_news_sm")
 
 def get_logged_user(request):
     """
@@ -51,7 +53,18 @@ def get_daily_random_sample(num_samples):
         return random_ids
     else:
         return []
+
+def get_top_and_thumbnail_recipes(recipe_ids_list, top_recipe_nb):
+    """
+    Sépare une liste d'IDs de recettes en deux parties :
+    - `top_recipe_list` contenant les `top_n` premières recettes.
+    - `thumbnail_recipe_list` contenant le reste des recettes.
+    """
+    top_recipe_qs = Recipe.objects.filter(id__in=recipe_ids_list[:top_recipe_nb])
+    thumbnail_recipe_qs = Recipe.objects.filter(id__in=recipe_ids_list[top_recipe_nb:])
     
+    return top_recipe_qs, thumbnail_recipe_qs
+
 def validate_title(title):
     """
     Validates the title using Django's CharField validation.
@@ -198,7 +211,7 @@ def save_recipe_and_ingredients(recipe_form, recipe_ingredient_form_list):
         recipe.recipe_ingredient.add(recipe_ingredient)
     return recipe
 
-def add_recipe_to_collection_if_checked(
+def create_recipe_collection_entry(
         add_recipe_to_collection_form,
         collection_name,
         logged_user,
@@ -219,7 +232,7 @@ def add_recipe_to_collection_if_checked(
     else:
         return False
 
-def link_recipe_to_collections(add_recipe_to_collection_form, logged_user, recipe, request):
+def add_recipe_to_collections(add_recipe_to_collection_form, logged_user, recipe, request):
     """
     Handles adding the recipe to the user's collections if selected in the form.
 
@@ -233,14 +246,14 @@ def link_recipe_to_collections(add_recipe_to_collection_form, logged_user, recip
     - None
     """
  
-    for collection_name, collection_title in RecipeCollectionEntry.COLLECTION_CHOICES:
-        added = add_recipe_to_collection_if_checked(
+    for collection_name, collection_title in RecipeCollectionEntry.MODEL_COLLECTION_CHOICES:
+        created = create_recipe_collection_entry(
             add_recipe_to_collection_form,
             collection_name,
             logged_user,
             recipe,
         )
-        if added:
+        if created:
             success_message = f"Recette ajoutée à votre {collection_title}"
             messages.success(request, success_message)    
 
@@ -292,19 +305,19 @@ def handle_remove_friend_request(request, logged_user):
     else:
         messages.error(request, "Aucun utilisateur à supprimer.")
        
-# def normalize_ingredient(ingredient_name):
-#     """
-#     Normalizes an ingredient name by lemmatizing its tokens.
+def normalize_ingredient(ingredient_name):
+    """
+    Normalizes an ingredient name by lemmatizing its tokens.
 
-#     Parameters:
-#     - ingredient_name (str or None): The name of the ingredient to normalize.
+    Parameters:
+    - ingredient_name (str or None): The name of the ingredient to normalize.
 
-#     Returns:
-#     - str: The normalized ingredient name with lemmatized tokens, or None if input is None.
-#     """
-#     if ingredient_name != None:
-#         doc = nlp(ingredient_name)
-#         return " ".join([token.lemma_ for token in doc])
+    Returns:
+    - str: The normalized ingredient name with lemmatized tokens, or None if input is None.
+    """
+    if ingredient_name != None:
+        doc = nlp(ingredient_name)
+        return " ".join([token.lemma_ for token in doc])
 
 def get_ingredient_inputs(form):
     """
@@ -320,128 +333,114 @@ def get_ingredient_inputs(form):
 
     for i in range(1, 4):
         ingredient_name = form.cleaned_data.get(f"ingredient_{i}")
-        # ingredient_inputs_dict[f"ingredient_{i}"] = normalize_ingredient(ingredient_name)
-        ingredient_inputs_dict[f"ingredient_{i}"] = ingredient_name
+        ingredient_inputs_dict[f"ingredient_{i}"] = normalize_ingredient(ingredient_name)
+        # ingredient_inputs_dict[f"ingredient_{i}"] = ingredient_name
     return ingredient_inputs_dict
 
-def filter_collection_by_member(logged_user, member, recipe_collection_qs):
-    """
-    Filters recipes by member visibility (e.g., friends only).
+def get_recipe_collection_by_sort_order(collection_name):
+    if collection_name == "history":
+        return RecipeCollectionEntry.objects.filter(collection_name=collection_name).order_by("-saving_date")
+    
+    if collection_name:
+        return RecipeCollectionEntry.objects.filter(collection_name=collection_name).order_by("recipe__title")
+    
+    return RecipeCollectionEntry.objects.all().order_by("recipe__title")
 
-    Parameters:
-    - logged_user (Member): The currently logged-in user.
-    - member (str): The visibility setting ("friends" or all members).
-    - recipe_collection_qs_list (list of QuerySet): A list of QuerySets containing recipe collection objects to filter.
+def filter_recipe_collection_by_member(recipe_collection_qs, member=None, logged_user=None):
+    if member == "friends" and not logged_user:
+        raise ValueError("logged_user doit être défini si member == 'friends'")
+    
+    if not member:
+        return recipe_collection_qs
 
-    Returns:
-    - QuerySet: A QuerySet containing recipes objected associated to the specified member group.
-    """
-    if member == "friends":
+    if member == "friends" and logged_user:
         friends = logged_user.friends.all()
-        recipe_collection_qs = recipe_collection_qs.filter(member__in=friends)
+        return recipe_collection_qs.filter(member__in=friends)
 
-    recipe_ids_set = set(recipe_collection_qs.values_list("recipe", flat=True))
+    return recipe_collection_qs.filter(member=member)
 
-    return Recipe.objects.filter(id__in=recipe_ids_set)
+def get_filtered_recipe_collection_qs(form, logged_user=None):
+    """
+    Applique les filtres communs à une collection de recettes en fonction des données du formulaire.
+    """
+    title = form.cleaned_data.get("title")
+    category = form.cleaned_data.get("category")
+    collection_name = form.cleaned_data.get("collection_name")
+    member = form.cleaned_data.get("member")
+    ingredient_inputs_dict = get_ingredient_inputs(form)
+
+    recipe_collection_qs = get_recipe_collection_by_sort_order(collection_name)
+    recipe_collection_qs = filter_recipe_collection_by_member(recipe_collection_qs, member, logged_user)
+
+    if collection_name == "history":
+        distinct_ids = recipe_collection_qs.values("recipe", "saving_date").annotate(min_id=Min("id")).values_list("min_id", flat=True)
+    else:
+        distinct_ids = recipe_collection_qs.values("recipe").annotate(min_id=Min("id")).values_list("min_id", flat=True)
+    
+    recipe_collection_qs = recipe_collection_qs.filter(id__in=distinct_ids)
+
+    filters = {}
+    if title:
+        filters["recipe__title__icontains"] = title
+    if category:
+        filters["recipe__category"] = category
+
+    recipe_collection_qs = recipe_collection_qs.filter(**filters)
+
+    for ingredient_name in ingredient_inputs_dict.values():
+        if ingredient_name:
+            recipe_collection_qs = recipe_collection_qs.filter(recipe__recipe_ingredient__ingredient__name__icontains=ingredient_name)
+
+    return recipe_collection_qs
+
+def get_filtered_recipe_qs(form, logged_user):
+    title = form.cleaned_data.get("title")
+    category = form.cleaned_data.get("category")
+    member = form.cleaned_data.get("member")
+    ingredient_inputs_dict = get_ingredient_inputs(form)
+
+    if not member:
+        recipe_qs = Recipe.objects.all()
+    else:
+        recipe_collection_qs = RecipeCollectionEntry.objects.all().order_by("recipe__title")
+        recipe_collection_qs = filter_recipe_collection_by_member(recipe_collection_qs, member, logged_user)
+        recipe_ids = recipe_collection_qs.values_list("recipe", flat=True)
+        recipe_qs = Recipe.objects.filter(id__in=recipe_ids)
+
+    filters = {}
+    if title:
+        filters["title__icontains"] = title
+    if category:
+        filters["category"] = category
+
+    recipe_qs = recipe_qs.filter(**filters)
+
+    for ingredient_name in ingredient_inputs_dict.values():
+        if ingredient_name:
+            recipe_qs = recipe_qs.filter(recipe_ingredient__ingredient__name__icontains=ingredient_name)
+
+    return recipe_qs.order_by("title")
 
 def handle_search_recipe_request(request, logged_user):
-    """
-    Processes a recipe search request based on various filters.
-
-    Parameters:
-    - request (HttpRequest): The HTTP request containing search parameters.
-    - logged_user (Member): The currently logged-in user performing the search.
-
-    Returns:
-    - tuple: A tuple containing:
-        - SearchRecipeForm: The processed form with search criteria applied.
-        - QuerySet: A filtered queryset of recipes matching the search criteria.
-    """
-    form = SearchRecipeForm(request.GET)
-    recipes_qs = Recipe.objects.all()
-
+    form = SearchRecipeForm(request.GET, logged_user=logged_user)
+    
     if form.is_valid():
-        title = form.cleaned_data.get("title")
-        category = form.cleaned_data.get("category")
         collection_name = form.cleaned_data.get("collection_name")
-        member = form.cleaned_data.get("member")
-        ingredient_inputs_dict = get_ingredient_inputs(form)
 
         if collection_name:
-            recipes_collection_qs = RecipeCollectionEntry.objects.filter(collection_name=collection_name)    
+            return form, get_filtered_recipe_collection_qs(form, logged_user=logged_user), Recipe.objects.none()
         else:
-            recipes_collection_qs = RecipeCollectionEntry.objects.all()
-        recipes_qs = filter_collection_by_member(logged_user, member, recipes_collection_qs)
-
-        filters = {}
-        if title:
-            filters["title__icontains"] = title
-        if category:
-            filters["category"] = category
-
-        recipes_qs = recipes_qs.filter(**filters)
-
-    
-        for ingredient_name in ingredient_inputs_dict.values():
-            if ingredient_name:
-                recipes_qs = recipes_qs.filter(recipe_ingredient__ingredient__name__icontains=ingredient_name)
-        
-    return form, recipes_qs
-
-def get_member_recipe_collection_entries(collection_name, member):
-    """
-    Returns the recipes associated with a member for a specific collection model.
-
-    Parameters:
-    - collection_model (Model): The collection model to retrieve recipes from.
-    - member (Member): The member whose recipes are being retrieved.
-
-    Returns:
-    - QuerySet: A QuerySet containing the recipes for the member.
-    """  
-    if collection_name == "history":
-        return RecipeCollectionEntry.objects.filter(member=member, collection_name=collection_name).order_by("-saving_date")
-    else:
-        return RecipeCollectionEntry.objects.filter(member=member, collection_name=collection_name).order_by("recipe__title")
-
-def filter_member_recipe_collection(request):
-    """
-    Filters recipe collections based on form data.
-
-    Parameters:
-    - request (HttpRequest): The request object containing form data for filtering.
-
-    Returns:
-    - tuple: A tuple containing:
-        - form (FilterRecipeCollectionForm or None): The form with the submitted data.
-        - recipe_collection_entries (QuerySet or None): A QuerySet of filtered recipe collection entries.
-    
-    If the required elements are missing, the function returns (None, None).
-    """
-    recipe_collection_entries = RecipeCollectionEntry.objects.none()   
-    form = FilterRecipeCollectionForm(request.POST)
-    
-    if form.is_valid():
-        member = form.cleaned_data.get("member")
-        collection_name = form.cleaned_data.get("collection_name")
-        title = form.cleaned_data.get("title")
-        category = form.cleaned_data.get("category")
-        ingredient_inputs_dict = get_ingredient_inputs(form)
-
-        recipe_collection_entries =  get_member_recipe_collection_entries(collection_name, member)
-        filters = {}
-        if title:
-            filters["recipe__title__icontains"] = title
-        if category:
-            filters["recipe__category"] = category
-
-        recipe_collection_entries = recipe_collection_entries.filter(**filters)
-
-        for ingredient_name in ingredient_inputs_dict.values():
-            if ingredient_name:
-                recipe_collection_entries = recipe_collection_entries.filter(recipe__recipe_ingredient__ingredient__name__icontains=ingredient_name)
+            return form, RecipeCollectionEntry.objects.none(), get_filtered_recipe_qs(form, logged_user=logged_user)
    
-    return form, recipe_collection_entries
+    return form, RecipeCollectionEntry.objects.none(), Recipe.objects.all().order_by("title")
+
+def handle_show_recipe_collection_request(request):
+    form = ShowRecipeCollectionForm(request.POST)
+
+    if form.is_valid():
+        return form, get_filtered_recipe_collection_qs(form)
+
+    return form, RecipeCollectionEntry.objects.none()
 
 def check_request_validity(request):
     """ 
@@ -459,7 +458,7 @@ def check_request_validity(request):
     if not collection_name:
         return None, None, None, JsonResponse({"message": "Nom de la collection manquant."}, status=400)
 
-    if collection_name not in dict(RecipeCollectionEntry.COLLECTION_CHOICES):
+    if collection_name not in dict(RecipeCollectionEntry.MODEL_COLLECTION_CHOICES):
         return None, None, None, JsonResponse({"message": f"Le modèle '{collection_name}' est inconnu."}, status=400)
 
     return logged_user, recipe_id, collection_name, None
@@ -472,7 +471,7 @@ def update_collection(request, action):
         return request_validity_error
 
     try:
-        collection_title = dict(RecipeCollectionEntry.COLLECTION_CHOICES).get(collection_name)
+        collection_title = dict(RecipeCollectionEntry.MODEL_COLLECTION_CHOICES).get(collection_name)
         if action == "add":
             _, created = RecipeCollectionEntry.objects.get_or_create(
                 collection_name=collection_name,

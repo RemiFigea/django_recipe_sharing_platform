@@ -6,17 +6,18 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_thumbnail_recipes.css' %}" />
 {% endblock %}
 
-{% block title %}echercher une recette{% endblock %}
+{% block title %}Rechercher une recette{% endblock %}
 
 {% block bodyId %}search-recipe-page{% endblock %}
 
 {% block content %}
 <div class="section-title">
-<h1>Rechercher une recette</h1>
+    <h1>Rechercher une recette</h1>
 </div>
 <div class="section-filter">
     {{ form|safe }}
 </div>
+{% include "partials/thumbnail_recipe_collection.html" %}
 {% include "partials/thumbnail_recipes.html" %}
 <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
 {% endblock %}

@@ -323,7 +323,7 @@ class AddRecipeToCollectionForm(forms.Form):
     COLLECTION_NAME_MAPPING = {
         "album": "add_to_album",
         "history": "add_to_history",
-        "trials": "add_to_recipe_to_try"        
+        "trials": "add_to_trials"        
     }
 
     add_to_album = forms.BooleanField(
@@ -441,42 +441,44 @@ class DeleteRecipeHistoryForm(forms.Form):
             required=True
         )
 
-class SearchRecipeForm(forms.Form):
-    collection_choices = [("", "toutes")] + \
-        [(key, value) for key, value in RecipeCollectionEntry.COLLECTION_CHOICES if value != "trials"]
-
-    member_choices = [
-        ("", "tous"),
-        ("friends", "mes amis"),
-    ]
-
-    title = forms.CharField(label="titre de la recette:", required=False)
-    category = forms.ChoiceField(label="type de plat:", choices=[("", "tous")] + Recipe.CATEGORY_CHOICES, required=False)
-    collection_name = forms.ChoiceField(label="collection:", choices=collection_choices, required=False)
-    member = forms.ChoiceField(label="membres:", choices=member_choices, required=False)
-    ingredient_1 = forms.CharField(label="ingredient 1:", required=False)
-    ingredient_2 = forms.CharField(label="ingredient 2:", required=False)
-    ingredient_3 = forms.CharField(label="ingredient 3:", required=False)
-
-class FilterRecipeCollectionForm(forms.Form):
-
+class BaseFilterRecipeForm(forms.Form):
     title = forms.CharField(label="titre de la recette:", required=False)
     category = forms.ChoiceField(
         label="type de plat:",
         choices=[("", "tous")] + Recipe.CATEGORY_CHOICES,
         required=False
-        )
-    collection_name = forms.ChoiceField(
-        label="collection :",
-        choices=RecipeCollectionEntry.COLLECTION_CHOICES,
-        required=True
-    )
-    member =  forms.ModelChoiceField(
-        label="membre",
-        queryset=Member.objects.all(),
-        required=True
     )
     ingredient_1 = forms.CharField(label="ingredient 1:", required=False)
     ingredient_2 = forms.CharField(label="ingredient 2:", required=False)
     ingredient_3 = forms.CharField(label="ingredient 3:", required=False)
+
+class SearchRecipeForm(BaseFilterRecipeForm):
+    FORM_COLLECTION_CHOICES = [("", "toutes")] + [
+        (key, value) for key, value in RecipeCollectionEntry.MODEL_COLLECTION_CHOICES if key != "trials"
+    ]
+    MEMBER_CHOICES = [
+        ("", "tous"),
+        ("friends", "mes amis"),
+    ]
+
+    collection_name = forms.ChoiceField(label="collection:", choices=FORM_COLLECTION_CHOICES, required=False)
+
+    def __init__(self, *args, logged_user=None, **kwargs):
+        self.logged_user = logged_user
+        super().__init__(*args, **kwargs)
+        
+        if logged_user:
+            self.fields["member"] = forms.ChoiceField(label="membres:", choices=self.MEMBER_CHOICES, required=False)
+
+class ShowRecipeCollectionForm(BaseFilterRecipeForm):
+    collection_name = forms.ChoiceField(
+        label="collection:",
+        choices=RecipeCollectionEntry.MODEL_COLLECTION_CHOICES,
+        required=True
+    )
+    member = forms.ModelChoiceField(
+        label="membre",
+        queryset=Member.objects.all(),
+        required=True
+    )
     

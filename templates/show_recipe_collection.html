@@ -3,7 +3,6 @@
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_thumbnail_recipes.css' %}" />
-<link rel="stylesheet" type="text/css" href="{% static 'css/style_show_recipe_collection.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_form_filter.css' %}" />
 {% endblock %}
 
@@ -18,36 +17,5 @@
 <div class="section-filter">
     {{ form|safe }}
 </div>
-<section class="thumbnail-recipes">
-{% for entry in recipe_entries %}
-    <div class="recipe-content">
-        <div class="img-placeholder">
-        <img class="recipe-img" src="{{ MEDIA_URL }}{{ entry.recipe.image }}" alt="{{ entry.recipe.title }}">
-        </div>
-        {% if  collection_name == "album" or collection_name == "trials" %}
-        <div class="recipe-description">
-            <h3><a id="title" href="show-recipe?recipe-id={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
-            <div class="recipe-metrix">
-                <dl>
-                    <dt>Préparation</dt>
-                    <dt>Cuisson</dt>
-                    <dt>Repos</dt>
-                    <dd> {{ entry.recipe.cooking_preparation }} min</dd>
-                    <dd> {{ entry.recipe.cooking_time }} min</dd>
-                    <dd> {{ entry.recipe.resting_time }} min</dd>
-                </dl>
-            </div>
-        </div>
-
-        {% elif collection_name == "history" %}
-        <div class="recipe-description-history">
-            <h3><a id="title" href="show-recipe?recipe-id={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
-            <div class="recipe-metrix">
-                <p> {{ entry.saving_date }} </p>
-            </div>
-        {% endif %}
-        </div>
-    </div>
-{% endfor %}
-</section>
+{% include "partials/thumbnail_recipe_collection.html" %}
 {% endblock %}

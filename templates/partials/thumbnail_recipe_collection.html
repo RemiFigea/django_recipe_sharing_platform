@@ -1,0 +1,32 @@
+<section class="thumbnail-recipes">
+{% for entry in recipe_collection_qs %}
+    <div class="recipe-content">
+        <div class="img-placeholder">
+        <img class="recipe-img" src="{{ MEDIA_URL }}{{ entry.recipe.image }}" alt="{{ entry.recipe.title }}">
+        </div>
+        {% if  collection_name != "history" %}
+        <div class="recipe-description">
+            <h3><a id="title" href="show-recipe?recipe-id={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
+            <div class="recipe-metrix">
+                <dl>
+                    <dt>Préparation</dt>
+                    <dt>Cuisson</dt>
+                    <dt>Repos</dt>
+                    <dd> {{ entry.recipe.cooking_preparation }} min</dd>
+                    <dd> {{ entry.recipe.cooking_time }} min</dd>
+                    <dd> {{ entry.recipe.resting_time }} min</dd>
+                </dl>
+            </div>
+        </div>
+
+        {% elif collection_name == "history" %}
+        <div class="recipe-description-history">
+            <h3><a id="title" href="show-recipe?recipe-id={{ entry.recipe.id }}">{{ entry.recipe.title }}</a></h3>
+            <div class="recipe-metrix">
+                <p> {{ entry.saving_date }} </p>
+            </div>
+        {% endif %}
+        </div>
+    </div>
+{% endfor %}
+</section>

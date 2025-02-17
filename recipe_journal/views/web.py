@@ -16,10 +16,10 @@ Views included:
 
 from django.conf import settings
 from django.template.loader import render_to_string
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
-from recipe_journal.forms import LoginForm, AddFriendForm, ModifyProfileForm
-from recipe_journal.forms import RegistrationForm, SearchRecipeForm
+from recipe_journal.forms import LoginForm, AddFriendForm, AddRecipeToCollectionForm, ModifyProfileForm
+from recipe_journal.forms import RecipeCombinedForm, RecipeIngredientForm, RegistrationForm, SearchRecipeForm
 from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 import recipe_journal.utils.utils as ut
 
@@ -86,27 +86,17 @@ def welcome(request):
     THUMBNAIL_RECIPE_NB = 12
 
     logged_user = ut.get_logged_user(request)
-    # top_recipe_ids_list = ut.get_daily_random_sample(TOP_RECIPE_NB)
-    # top_recipe_list = Recipe.objects.filter(id__in=top_recipe_ids_list)
-    # thumbnail_recipe_ids_list = ut.get_daily_random_sample(THUMBNAIL_RECIPE_NB)
-    # thumbnail_recipe_list = Recipe.objects.filter(id__in=thumbnail_recipe_ids_list)
     recipe_ids_list = ut.get_daily_random_sample(TOP_RECIPE_NB + THUMBNAIL_RECIPE_NB)
-    if len(recipe_ids_list) >= TOP_RECIPE_NB:
-        top_recipe_list = Recipe.objects.filter(id__in=recipe_ids_list[:TOP_RECIPE_NB])
-        thumbnail_recipe_list = Recipe.objects.filter(id__in=recipe_ids_list[TOP_RECIPE_NB:])
-    else:
-        top_recipe_list = Recipe.objects.filter(id__in=recipe_ids_list[:TOP_RECIPE_NB])
-        thumbnail_recipe_list = []
+    top_recipe_qs, thumbnail_recipe_qs = ut.get_top_and_thumbnail_recipes(recipe_ids_list, TOP_RECIPE_NB)
 
     context = {
         "logged_user": logged_user,
-        "top_recipe_list": top_recipe_list,
-        "thumbnail_recipes": thumbnail_recipe_list,
+        "top_recipe_qs": top_recipe_qs,
+        "thumbnail_recipe_qs": thumbnail_recipe_qs,
         "MEDIA_URL": settings.MEDIA_URL,
     }
     return render(request, "welcome.html", context)
 
-@require_http_methods(["POST"])
 def add_recipe(request):
     """
     Handles adding a new recipe by validating forms, saving the recipe and ingredients, 
@@ -115,22 +105,27 @@ def add_recipe(request):
     logged_user = ut.get_logged_user(request)
     if not logged_user:
         return redirect("/login")
+    
+    if request.method != "POST":
+        recipe_form = RecipeCombinedForm()
+        recipe_ingredient_form_list = [RecipeIngredientForm()]
+        add_recipe_to_collection_form = AddRecipeToCollectionForm()
 
-    recipe_form, recipe_ingredient_form_list, add_recipe_to_collection_form = ut.prepare_recipe_forms(request)
+    if request.method == "POST":
+        recipe_form, recipe_ingredient_form_list, add_recipe_to_collection_form = ut.prepare_recipe_forms(request)
 
-    if ut.are_forms_valid(*recipe_ingredient_form_list, recipe_form, add_recipe_to_collection_form):
-        recipe = ut.save_recipe_and_ingredients(recipe_form, recipe_ingredient_form_list)
-        ut.link_recipe_to_collections(add_recipe_to_collection_form, logged_user, recipe, request)
-        return redirect("/show-confirmation-page")
-        
-    else:
-        context = {
-            "logged_user": logged_user,
-            "recipe_form": recipe_form,
-            "recipe_ingredient_form_list": recipe_ingredient_form_list,
-            "manage_recipe_collection_form": add_recipe_to_collection_form
-            }
-        return render(request, "add_recipe.html", context)
+        if ut.are_forms_valid(*recipe_ingredient_form_list, recipe_form, add_recipe_to_collection_form):
+            recipe = ut.save_recipe_and_ingredients(recipe_form, recipe_ingredient_form_list)
+            ut.add_recipe_to_collections(add_recipe_to_collection_form, logged_user, recipe, request)
+            return redirect("/show-confirmation-page")
+            
+    context = {
+        "logged_user": logged_user,
+        "recipe_form": recipe_form,
+        "recipe_ingredient_form_list": recipe_ingredient_form_list,
+        "manage_recipe_collection_form": add_recipe_to_collection_form
+        }
+    return render(request, "add_recipe.html", context)
 
 def show_confirmation_page(request):
     """
@@ -142,25 +137,25 @@ def show_confirmation_page(request):
 
     return render(request, "confirmation_page.html", { "logged_user": logged_user })
 
+@require_http_methods(["GET"])
 def show_recipe(request):
     """
     Displays the requested recipe if the recipe ID is valid, otherwise redirects to the homepage.
     """
     logged_user = ut.get_logged_user(request)
-
-    if request.method == "GET" and "recipe-id" in request.GET:
-        recipe_id = request.GET["recipe-id"]
-        result = Recipe.objects.filter(id = recipe_id)
-        if len(result) == 1:
-            recipe = Recipe.objects.get(id = recipe_id)
-            context = {
-                "logged_user": logged_user,
-                "recipe": recipe,
-                "MEDIA_URL": settings.MEDIA_URL,
-            }
-            return render(request, "show_recipe.html", context)
+    recipe_id = request.GET.get("recipe-id")
     
-    return redirect("/welcome")
+    if not recipe_id or not recipe_id.isdigit():
+        return redirect("/welcome")
+    
+    recipe = get_object_or_404(Recipe, id=int(recipe_id))
+        
+    context = {
+        "logged_user": logged_user,
+        "recipe": recipe,
+        "MEDIA_URL": settings.MEDIA_URL,
+    }
+    return render(request, "show_recipe.html", context)
 
 def show_friends(request):
     """Displays the logged-in user's friend list and handles adding or removing friends."""
@@ -172,7 +167,7 @@ def show_friends(request):
 
     if request.method == "POST" and "username_to_add" in request.POST:
         form = ut.handle_add_friend_request(request, logged_user)
-
+    
     elif request.method == "POST" and "username_to_remove" in request.POST:
         ut.handle_remove_friend_request(request, logged_user)
 
@@ -186,53 +181,53 @@ def show_friends(request):
     return render(request, "show_friends.html", context)
 
 def search_recipe(request):
-    """Handles recipe search and renders the search page."""
+    """"""
     logged_user = ut.get_logged_user(request)
-    
-    if not logged_user:
-        return redirect("/login")
-    
-    form = SearchRecipeForm()
-    recipes_qs = Recipe.objects.all()
 
     if request.method == "GET":
-        form, recipes_qs = ut.handle_search_recipe_request(request, logged_user)
+        form, recipe_collection_qs, recipe_qs = ut.handle_search_recipe_request(request, logged_user)
+    else:
+        form = SearchRecipeForm(logged_user=logged_user)
+        recipe_collection_qs = RecipeCollectionEntry.objects.none()
+        recipe_qs = Recipe.objects.all().order_by("title")
        
     form_html = render_to_string("partials/form_search_recipe.html", {"form": form}, request=request)
+    collection_name = getattr(form, "cleaned_data", {}).get("collection_name", None)
 
-    
     context = {
     "logged_user": logged_user,
-    "thumbnail_recipes": recipes_qs,
+    "collection_name": collection_name,
+    "recipe_collection_qs": recipe_collection_qs,
+    "thumbnail_recipe_qs": recipe_qs,
     "form": form_html,
     "MEDIA_URL": settings.MEDIA_URL,
     }
-
     return render(request, "search_recipe.html", context)
 
-@require_http_methods(["POST"])
-def show_member_recipe_collection(request):
+def show_recipe_collection(request):
     """
-    Displays a member's recipe collection for a specified collection model (album, to-try, history).
     """
     logged_user = ut.get_logged_user(request)
     if not logged_user:
         return redirect("/login")
     
-    form, recipe_collection_entries = ut.filter_member_recipe_collection(request)
+    if request.method == "POST":
+        form, recipe_collection_qs = ut.handle_show_recipe_collection_request(request)
+    else:
+        return redirect("/welcome")
 
-    form_html = render_to_string("partials/form_filter_recipe_collection.html", {"form": form}, request=request)
+    form_html = render_to_string("partials/form_show_recipe_collection.html", {"form": form}, request=request)
     member = getattr(form, "cleaned_data", {}).get("member", None)
     collection_name = getattr(form, "cleaned_data", {}).get("collection_name", None)
-    collection_title = dict(RecipeCollectionEntry.COLLECTION_CHOICES).get(collection_name)
+    collection_title = dict(RecipeCollectionEntry.MODEL_COLLECTION_CHOICES).get(collection_name)
 
     context = {
         "logged_user": logged_user,
-        "form": form_html,
         "member": member,
         "collection_name": collection_name,
         "collection_title": collection_title,
-        "recipe_entries": recipe_collection_entries,
+        "recipe_collection_qs": recipe_collection_qs,
+        "form": form_html,
         "MEDIA_URL": settings.MEDIA_URL,
     }
     return render(request, "show_recipe_collection.html", context)

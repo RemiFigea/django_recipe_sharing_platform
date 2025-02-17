@@ -34,11 +34,13 @@ def check_title(request):
     
     title = request.GET.get("title")
     error_list = ut.validate_title(title)
-
+    
     if not error_list and Recipe.objects.filter(title=title).exists():
         error_list = ["Ce titre de recette est déjà utilisé!"]
     
     if error_list:
+        if "This field is required." in error_list:
+            error_list.remove("This field is required.")
         return JsonResponse({"error_list": error_list})
     else:
         return JsonResponse({"error_list": []})
@@ -96,7 +98,6 @@ def add_recipe_history(request):
     if form.is_valid():
         form.save()
         return JsonResponse({"success": True})
-    print(form.errors)
     return JsonResponse({"success": False, "errors": form.errors})
     
 @require_http_methods(["POST"])

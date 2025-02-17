@@ -92,13 +92,13 @@ class RecipeCollectionEntry(models.Model):
 
     Stores a member, recipe, saving date, and personal notes.
     """
-    COLLECTION_CHOICES = [
-        ("history", "historique de recettes"),
-        ("album", "album de recettes"),
-        ("trials", "liste de recettes à essayer")
+    MODEL_COLLECTION_CHOICES = [
+        ("history", "Historique de recettes"),
+        ("album", "Album de recettes"),
+        ("trials", "Liste de recettes à essayer")
     ]
 
-    collection_name = models.CharField(max_length=20, choices=COLLECTION_CHOICES, null=False, blank=False, default="album")
+    collection_name = models.CharField(max_length=20, choices=MODEL_COLLECTION_CHOICES, null=False, blank=False, default="album")
     member = models.ForeignKey('Member', on_delete=models.CASCADE)
     recipe = models.ForeignKey('Recipe', on_delete=models.CASCADE)
     saving_date = models.DateField(default=date.today, null=False, blank=True)
@@ -126,9 +126,7 @@ class RecipeCollectionEntry(models.Model):
     
         super().save(*args, **kwargs)
     
-
     def __str__(self):
-        return f'{self.recipe} in {self.collection_name} by {self.member}'
-
+        return f"{self.recipe.title} de la collection {self.collection_name} de {self.member.username}"
 
 

@@ -22,7 +22,7 @@
   </ul>
 {% endif %}
 <div class="top-recipes">
-    {% for recipe in top_recipe_list %}
+    {% for recipe in top_recipe_qs %}
     <div class="recipe-content">
         <div class="img-placeholder"><img class="recipe-img" src="{{ MEDIA_URL }}{{ recipe.image }}" alt="{{ recipe.title }}"></div>
         <div class="recipe-description">

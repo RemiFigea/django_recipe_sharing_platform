@@ -14,7 +14,7 @@
         <header>
             {% block headerContent %}
             <h1>My Recipe Journal</h1>
-            <ul id="header-link-list">
+            <ul id="header-link-list" logged-user-id="{{ logged_user.id }}">
                 <li>
                     <a href="/search-recipe" class="header-link">Chercher une recette</a>
                 </li>
@@ -67,7 +67,7 @@
         <main>
             {% include "partials/modal_notification.html" %}
             {% block content %}{% endblock %}
-            <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
         </main>
+        <script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
     </body>
  </html>

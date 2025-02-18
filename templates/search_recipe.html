@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 {% block head %}
-<link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_form_filter.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_thumbnail_recipes.css' %}" />
 {% endblock %}
@@ -19,5 +18,4 @@
 </div>
 {% include "partials/thumbnail_recipe_collection.html" %}
 {% include "partials/thumbnail_recipes.html" %}
-<script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
 {% endblock %}

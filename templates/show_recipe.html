@@ -3,7 +3,6 @@
 {% block head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<link rel="stylesheet" type="text/css" href="{% static 'css/style_base.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/style_show_recipe.css' %}" />
 {% endblock %}
 
@@ -26,6 +25,7 @@
             <div class="dropdown-menu">
                 <button type="button" class="dropdown-item add-to-collection">Ajouter à mon album</button>
                 <button type="button" class="dropdown-item remove-from-collection">Retirer de mon album</button>
+                <button type="button" class="dropdown-item login-required-msg hidden">Connectez-vous à votre compte pour utiliser cette fonctionnalité</button>
             </div>
         </div>
         <div class="dropdown" collection-name="history">
@@ -33,6 +33,7 @@
             <div class="dropdown-menu">
                 <button type="button" class="dropdown-item add-to-collection" id="add-to-history">Ajouter à mon historique</button>
                 <button type="button" class="dropdown-item remove-from-collection" id="remove-from-history">Retirer de mon historique</button>
+                <button type="button" class="dropdown-item login-required-msg hidden">Connectez-vous à votre compte pour utiliser cette fonctionnalité</button>
             </div>
         </div>
         <div class="dropdown" collection-name="trials">
@@ -40,6 +41,7 @@
             <div class="dropdown-menu">
                 <button type="button" class="dropdown-item add-to-collection">Ajouter à mes recettes à essayer</button>
                 <button type="button" class="dropdown-item remove-from-collection">Retirer de mes recettes à essayer</button>
+                <button type="button" class="dropdown-item login-required-msg hidden">Connectez-vous à votre compte pour utiliser cette fonctionnalité</button>
             </div>
         </div>
     </div>
@@ -83,6 +85,5 @@
         </div>
     </div>
 </div>
-<script type="text/javascript" src="{% static 'js/script_base.js' %}"></script>
 <script type="text/javascript" src="{% static 'js/script_show_recipe.js' %}"></script>
 {% endblock %}

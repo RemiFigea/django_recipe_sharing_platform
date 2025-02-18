@@ -22,14 +22,15 @@ async function updateCollectionButton(dropdown, recipeId) {
 
         if (data.is_in_collection) {
             collectionButton.style.opacity = "1";
-            removeFromCollection.style.display = "block";
+            removeFromCollection.classList.remove("hidden");
+
             if (collectionName !== "history") {
-                addToCollection.style.display = "none";
+                addToCollection.classList.add("hidden");
             }
         } else {
             collectionButton.style.opacity = "0.2";
-            addToCollection.style.display = "block";
-            removeFromCollection.style.display = "none";
+            addToCollection.classList.remove("hidden");
+            removeFromCollection.classList.add("hidden");
         }
     } catch (error) {
         console.error("Erreur lors de la mise à jour du bouton :", error);
@@ -184,22 +185,54 @@ function setupModal(modalId, openBtnId, formId, apiUrl, calendar) {
 
 };
 
-
 function setupModals(calendar) {
     setupModal("modal-add-recipe-history", "add-to-history", "add-recipe-history-form", "api/add-recipe-history", calendar);
     setupModal("modal-remove-recipe-history", "remove-from-history", "remove-recipe-history-form", "api/remove-recipe-history", calendar);
 };
 
+function checkLoggedUser(){
+    const headerList = document.getElementById("header-link-list");
+    const loggedUser = headerList.getAttribute("logged-user-id");
+    return !!loggedUser;
+};
+
+function showLoginMessageInCollectionButtonDropdown() {
+    const buttonContainer = document.getElementById("collection-buttons");
+    
+    if (!buttonContainer) {
+        console.error("Boutons manquants.");
+        return;
+    }
+
+    buttonContainer.querySelectorAll(".dropdown").forEach((dropdown) => {
+        const addToCollection = dropdown.querySelector(".add-to-collection");
+        const removeFromCollection = dropdown.querySelector(".remove-from-collection");
+        const loginRequiredMsg = dropdown.querySelector(".login-required-msg");
+
+        if (!addToCollection || !removeFromCollection || !loginRequiredMsg) {
+            console.error("Éléments manquants dans le dropdown.");
+            return;
+        };
+
+        addToCollection.classList.add("hidden");
+        removeFromCollection.classList.add("hidden");
+        loginRequiredMsg.classList.remove("hidden");
+    });
+};
 
 document.addEventListener("DOMContentLoaded", () => {
-    updateAllCollectionButton();
-    document.getElementById("collection-buttons")?.addEventListener("click", (event) => {
-        if (event.target.classList.contains("add-to-collection")) {
-            handleCollectionUpdate(event, "/api/add-to-collection");
-        } else if (event.target.classList.contains("remove-from-collection")) {
-            handleCollectionUpdate(event, "/api/remove-from-collection");
-        }
-    });
-    const calendar = setupCalendar();
-    setupModals(calendar);
+    if (checkLoggedUser()) {
+        updateAllCollectionButton();
+        document.getElementById("collection-buttons")?.addEventListener("click", (event) => {
+            if (event.target.classList.contains("add-to-collection")) {
+                handleCollectionUpdate(event, "/api/add-to-collection");
+            } else if (event.target.classList.contains("remove-from-collection")) {
+                handleCollectionUpdate(event, "/api/remove-from-collection");
+            }
+        });
+        const calendar = setupCalendar();
+        setupModals(calendar);
+    } else {
+        showLoginMessageInCollectionButtonDropdown();
+    };
 });

@@ -1,15 +1,10 @@
 """
 Module defining models for a recipe-sharing platform.
 
-Models included:
-    - Member: Represents a site member with authentication and friend connections.
-    - Recipe: Represents a recipe with details like title, category, ingredients, and cooking times.
-    - RecipeIngredient: Represents ingredients used in a recipe, including quantity and unit.
-    - Ingredient: Represents a basic ingredient (e.g., flour, sugar) used in recipes.
-    - BaseRecipeCollectionEntry: Abstract base class for entries in recipe collections (e.g., album, history).
-    - RecipeAlbumEntry: Represents a recipe entry in a member's album.
-    - RecipeToTryEntry: Represents a recipe entry in a member's "to try" list.
-    - RecipeHistoryEntry: Represents a recipe entry in a member's history.
+This module contains the core models that represent the entities involved in a recipe-sharing platform.
+It includes models for members, recipes, recipe collections, and ingredients, as well as the relationships 
+between them. The models define how users interact with recipes, store their favorites or trial recipes, 
+and track recipe details such as cooking time, ingredients, and personal notes.
 """
 from datetime import date
 from django.db import models
@@ -27,11 +22,12 @@ class Member(models.Model):
 
 class Recipe(models.Model):
     """
-    Represents a recipe.
+    Represents a recipe with details such as title, category, ingredients, cooking times, and more.
 
-    A recipe includes title, category, source, descriptions, cooking times, ingredients, and tags.
-    Images are compressed before saving.
+    A recipe can be associated with multiple ingredients 
+    through a many-to-many relationship with the 'RecipeIngredient' model.
     """
+
     CATEGORY_CHOICES = [
         ("entrée", "entrée"),
         ("plat", "plat principal"),
@@ -88,9 +84,10 @@ class Ingredient(models.Model):
 
 class RecipeCollectionEntry(models.Model):
     """
-    Base class for recipe collection entries.
+    Associates a recipe with a specific member, collection name, saving date, and a personal note.
 
-    Stores a member, recipe, saving date, and personal notes.
+    This model helps track the recipes a member has in various collections (e.g., 'history', 'album', 'trials').
+    A member can have different recipes saved in these collections, with an option to add personal notes for each.
     """
     MODEL_COLLECTION_CHOICES = [
         ("history", "Historique de recettes"),
@@ -105,7 +102,14 @@ class RecipeCollectionEntry(models.Model):
     personal_note = models.TextField(null=True, blank=True)   
 
     def save(self, *args, **kwargs):
+        """
+        Saves the entry to the database after validating it.
 
+        The validation checks if the recipe already exists in the specified collection for the given member and date.
+        If the recipe is in the 'history' collection, it checks for duplicate entries on the same date. 
+        If the recipe is in 'album' or 'trials', it ensures it hasn't been added before.
+        Raises ValueError if any validation fails.
+        """
         if self.collection_name == "history":
             if RecipeCollectionEntry.objects.filter(
                 member=self.member,
@@ -127,6 +131,8 @@ class RecipeCollectionEntry(models.Model):
         super().save(*args, **kwargs)
     
     def __str__(self):
+        """Returns a string representation of the entry."""
+
         return f"{self.recipe.title} de la collection {self.collection_name} de {self.member.username}"
 
 

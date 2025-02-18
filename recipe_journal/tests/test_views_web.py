@@ -1,12 +1,11 @@
-"""
-Unit tests for the web.py module.
-"""
+"""Unit tests for the views contained in the web module."""
+
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse
-from recipe_journal.forms import AddFriendForm, AddRecipeToCollectionForm, RecipeCombinedForm, RecipeIngredientForm
+from recipe_journal.forms import AddFriendForm, AddRecipeToCollectionsForm, RecipeCombinedForm, RecipeIngredientForm
 from recipe_journal.forms import RegistrationForm, ShowRecipeCollectionForm, SearchRecipeForm
 from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
@@ -271,7 +270,7 @@ class AddRecipeTest(TestCase):
 
         self.assertIsInstance(context["recipe_form"], RecipeCombinedForm)
         self.assertIsInstance(context["recipe_ingredient_form_list"][0], RecipeIngredientForm)
-        self.assertIsInstance(context[ "manage_recipe_collection_form"], AddRecipeToCollectionForm)
+        self.assertIsInstance(context[ "manage_recipe_collection_form"], AddRecipeToCollectionsForm)
         mock_are_forms_valid.assert_not_called()
     
     

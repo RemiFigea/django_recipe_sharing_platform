@@ -1,14 +1,7 @@
 """
-Module interacting with JavaScript functions to dynamically update the template.
+Module containing the views of the application handling backend interaction with frontend (AJAX).
 
-Functions included:
-    - check_title: Validates if a recipe title is unique and properly formatted.
-    - add_ingredient_form: Dynamically adds an ingredient form and renders it.
-    - check_collection_status: Checks if a recipe is already in a user's collection (album, to-try, or history).
-    - add_to_collection: Adds a recipe to a user's collection (album, to-try, or history) if it's not already there.
-    - remove_from_collection: Removes a recipe from a user's collection (album, to-try, or history).
-    - add_recipe_history:
-    - remove_recipe_history:
+Each view interacts with the backend models and returns responses to the frontend in JSON format.
 """
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
@@ -58,10 +51,20 @@ def add_ingredient_form(request):
     """
     new_form = RecipeIngredientForm()
     form_html = render_to_string("partials/form_recipe_ingredient.html", {"form": new_form}, request=request)
+    
     return JsonResponse({"form_html": form_html})
 
 @require_http_methods(["POST"])
 def check_collection_status(request):
+    """
+    Checks if a recipe is in a specific collection for the logged-in user.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request object containing the user and recipe information to check.
+
+    Returns:
+    - JsonResponse: A response indicating whether the recipe is in the specified collection for the user.
+    """
     logged_user, recipe_id, collection_name, error_response = ut.check_request_validity(request)
     if error_response:
         return error_response
@@ -76,16 +79,38 @@ def check_collection_status(request):
 
 @require_http_methods(["POST"])
 def add_to_collection(request):
+    """
+    Adds a recipe to a user's collection.
+
+    This function delegates the actual process to the 'update_collection' function, specifying the 'add' action.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request object containing the user and recipe data.
+
+    Returns:
+    - JsonResponse: A response indicating the result of the action, including a success message or an error.
+    """
     return ut.update_collection(request, "add")
 
 @require_http_methods(["POST"])
 def remove_from_collection(request):
+    """
+    Removes a recipe from a user's collection.
+
+    This function delegates the actual process to the 'update_collection' function, specifying the 'remove' action.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request object containing the user and recipe data.
+
+    Returns:
+    - JsonResponse: A response indicating the result of the action, including a success message or an error.
+    """
     return ut.update_collection(request, "remove")
 
 @require_http_methods(["POST"])
 def add_recipe_history(request):
     """
-    Adds a recipe to a user's history.
+    Adds a recipe to a user's history collection.
 
     Parameters:
     - request (HttpRequest): The HTTP request containing the recipe data to be saved.
@@ -98,12 +123,13 @@ def add_recipe_history(request):
     if form.is_valid():
         form.save()
         return JsonResponse({"success": True})
+    
     return JsonResponse({"success": False, "errors": form.errors})
     
 @require_http_methods(["POST"])
 def remove_recipe_history(request):
     """
-    Removes a recipe from a user's history.
+    Removes a recipe from a user's history collection.
 
     Parameters:
     - request (HttpRequest): The HTTP request containing the member ID, recipe ID, and history entry date.

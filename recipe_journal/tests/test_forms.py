@@ -1,6 +1,5 @@
-"""
-Unit tests for the forms.py module.
-"""
+"""Unit tests for the forms module."""
+
 from datetime import date, timedelta
 from django.contrib.auth.hashers import make_password
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -144,7 +143,7 @@ class RecipeActionFormTest(TestCase):
             "add_to_album": False,
             "add_to_trials": True,
         }
-        form = AddRecipeToCollectionForm(data=form_data)
+        form = AddRecipeToCollectionsForm(data=form_data)
         
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["add_to_history"], True)
@@ -255,14 +254,14 @@ class AddRecipeIngredientFormTest(TestCase):
         self.assertTrue(len(RecipeIngredient.objects.all())==2)
         self.assertTrue(len(Ingredient.objects.all())==1)
 
-class AddRecipeToCollectionTest(TestCase):
+class AddRecipeToCollectionsTest(TestCase):
     def test_form_without_action_selected(self):
         form_data = {
             "add_to_album" : False,
             "add_to_history" : False,
             "add_to_trials" : False,
         }
-        form = AddRecipeToCollectionForm(data=form_data)
+        form = AddRecipeToCollectionsForm(data=form_data)
 
         self.assertFalse(form.is_valid())
         self.assertIn("Vous devez cocher au moins une option.", form.non_field_errors())
@@ -273,7 +272,7 @@ class AddRecipeToCollectionTest(TestCase):
             "add_to_history" : True,
             "add_to_trials" : True,
         }
-        form = AddRecipeToCollectionForm(data=form_data)
+        form = AddRecipeToCollectionsForm(data=form_data)
 
         self.assertTrue(form.is_valid())
 

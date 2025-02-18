@@ -1,5 +1,8 @@
 """
-Module for managing recipes, forms, and user interactions.
+General utility module with helper functions used throughout the project.
+
+This module includes functions for managing user interactions, filtering recipes, handling collections,
+and other project-specific logic.
 """
 from django import forms
 from django.contrib import messages
@@ -7,7 +10,7 @@ from django.db.models import Min
 from django.forms import ValidationError
 from django.http import JsonResponse
 from recipe_journal.forms import  AddFriendForm, RecipeIngredientForm, RecipeCombinedForm
-from recipe_journal.forms import ShowRecipeCollectionForm, AddRecipeToCollectionForm, SearchRecipeForm
+from recipe_journal.forms import ShowRecipeCollectionForm, AddRecipeToCollectionsForm, SearchRecipeForm
 from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 import random as rd
 import spacy
@@ -56,9 +59,16 @@ def get_daily_random_sample(num_samples):
 
 def get_top_and_thumbnail_recipes(recipe_ids_list, top_recipe_nb):
     """
-    Sépare une liste d'IDs de recettes en deux parties :
-    - `top_recipe_list` contenant les `top_n` premières recettes.
-    - `thumbnail_recipe_list` contenant le reste des recettes.
+    Splits a list of recipe IDs into two querysets.
+
+    Parameters:
+    - recipe_ids_list (list): List of recipe IDs.
+    - top_recipe_nb (int): Number of recipes to include in the top list.
+
+    Returns:
+    - tuple: A tuple containing:
+        - QuerySet: `top_recipe_qs` with the first `top_recipe_nb` recipes.
+        - QuerySet: `thumbnail_recipe_qs` with the remaining recipes.
     """
     top_recipe_qs = Recipe.objects.filter(id__in=recipe_ids_list[:top_recipe_nb])
     thumbnail_recipe_qs = Recipe.objects.filter(id__in=recipe_ids_list[top_recipe_nb:])
@@ -144,6 +154,7 @@ def initialize_combined_form(combined_form_class, request):
 
     if any(field in request.POST for field in form_fields):
         return combined_form_class(request.POST, request.FILES)
+    
     return combined_form_class()
 
 def initialize_form(form_class, request):
@@ -166,7 +177,7 @@ def initialize_form(form_class, request):
     
 def prepare_recipe_forms(request):
     """
-    Initializes and returns the forms and related to the recipe.
+    Initializes and returns the forms related to the recipe.
 
     Parameters:
     - request (HttpRequest): The HTTP request object.
@@ -178,7 +189,7 @@ def prepare_recipe_forms(request):
     recipe_ingredient_form_list = get_recipe_ingredient_form_list(recipe_ingredient_list)
     
     recipe_form = initialize_combined_form(RecipeCombinedForm, request)
-    manage_collections_form = initialize_form(AddRecipeToCollectionForm, request)
+    manage_collections_form = initialize_form(AddRecipeToCollectionsForm, request)
     
     return recipe_form, recipe_ingredient_form_list, manage_collections_form
 
@@ -206,21 +217,32 @@ def save_recipe_and_ingredients(recipe_form, recipe_ingredient_form_list):
     - Recipe: The saved recipe object.
     """
     recipe = recipe_form.save()
+
     for recipe_ingredient_form in recipe_ingredient_form_list:
         recipe_ingredient = recipe_ingredient_form.save()
         recipe.recipe_ingredient.add(recipe_ingredient)
     return recipe
 
 def create_recipe_collection_entry(
-        add_recipe_to_collection_form,
+        add_recipe_to_collections_form,
         collection_name,
         logged_user,
         recipe
         ):
     """
+    Creates an entry in the recipe collection if the user selects the option.
+
+    Parameters:
+    - add_recipe_to_collections_form (AddRecipeToCollectionForm): The form containing user selection.
+    - collection_name (str): The name of the recipe collection.
+    - logged_user (Member): The currently logged-in user.
+    - recipe (Recipe): The recipe to be added to the collection.
+
+    Returns:
+    - bool: True if the recipe was added to the collection, False otherwise.
     """
-    action_field = AddRecipeToCollectionForm.COLLECTION_NAME_MAPPING.get(collection_name)
-    add_to_collection = add_recipe_to_collection_form.cleaned_data.get(action_field, False)
+    action_field = AddRecipeToCollectionsForm.COLLECTION_NAME_MAPPING.get(collection_name)
+    add_to_collection = add_recipe_to_collections_form.cleaned_data.get(action_field, False)
 
     if add_to_collection:
         RecipeCollectionEntry.objects.create(
@@ -232,12 +254,12 @@ def create_recipe_collection_entry(
     else:
         return False
 
-def add_recipe_to_collections(add_recipe_to_collection_form, logged_user, recipe, request):
+def add_recipe_to_collections(add_recipe_to_collections_form, logged_user, recipe, request):
     """
     Handles adding the recipe to the user's collections if selected in the form.
 
     Parameters:
-    - recipe_action_form (Form): The form for handling recipe actions.
+    - add_recipe_to_collections_form (Form): The form containing user selection.
     - logged_user (Member): The logged-in user.
     - recipe (Recipe): The recipe to add to collections.
     - request (HttpRequest): The HTTP request object.
@@ -248,7 +270,7 @@ def add_recipe_to_collections(add_recipe_to_collection_form, logged_user, recipe
  
     for collection_name, collection_title in RecipeCollectionEntry.MODEL_COLLECTION_CHOICES:
         created = create_recipe_collection_entry(
-            add_recipe_to_collection_form,
+            add_recipe_to_collections_form,
             collection_name,
             logged_user,
             recipe,
@@ -289,7 +311,7 @@ def handle_remove_friend_request(request, logged_user):
     - logged_user (Member): The currently logged-in user who is attempting to remove a friend.
 
     Returns:
-    - None
+    - None: Updates the user's friend list and adds a success or error message.
     """
     friend_username = request.POST.get("username_to_remove")
     
@@ -338,6 +360,16 @@ def get_ingredient_inputs(form):
     return ingredient_inputs_dict
 
 def get_recipe_collection_by_sort_order(collection_name):
+    """
+    Retrieves recipe collection entries ordered by saving date or recipe title.
+
+    Parameters:
+    - collection_name (str): The name of the recipe collection to retrieve.
+
+    Returns:
+    - QuerySet: A queryset of RecipeCollectionEntry objects, ordered by saving date for "history",
+      or by recipe title for other collections, or all entries if no collection is specified.
+    """
     if collection_name == "history":
         return RecipeCollectionEntry.objects.filter(collection_name=collection_name).order_by("-saving_date")
     
@@ -347,6 +379,20 @@ def get_recipe_collection_by_sort_order(collection_name):
     return RecipeCollectionEntry.objects.all().order_by("recipe__title")
 
 def filter_recipe_collection_by_member(recipe_collection_qs, member=None, logged_user=None):
+    """
+    Filters a recipe collection by the specified member or logged-in user's friends.
+
+    Parameters:
+    - recipe_collection_qs (QuerySet): The queryset of recipe collection entries to filter.
+    - member (str or Member, optional): The member to filter by. If "friends", filters by logged-in user's friends.
+    - logged_user (Member, optional): The currently logged-in user, required if 'member' is "friends".
+
+    Returns:
+    - QuerySet: A filtered queryset of recipe collection entries.
+    
+    Raises:
+    - ValueError: If 'member' is "friends" and 'logged_user' is not provided.
+    """
     if member == "friends" and not logged_user:
         raise ValueError("logged_user doit être défini si member == 'friends'")
     
@@ -361,7 +407,14 @@ def filter_recipe_collection_by_member(recipe_collection_qs, member=None, logged
 
 def get_filtered_recipe_collection_qs(form, logged_user=None):
     """
-    Applique les filtres communs à une collection de recettes en fonction des données du formulaire.
+    Applies common filters to a recipe collection based on the form data.
+
+    Parameters:
+    - form (Form): The form containing filter data for the recipe collection.
+    - logged_user (Member, optional): The currently logged-in user.
+
+    Returns:
+    - QuerySet: A filtered queryset of recipe collection entries based on the form data.
     """
     title = form.cleaned_data.get("title")
     category = form.cleaned_data.get("category")
@@ -394,6 +447,16 @@ def get_filtered_recipe_collection_qs(form, logged_user=None):
     return recipe_collection_qs
 
 def get_filtered_recipe_qs(form, logged_user):
+    """
+    Filters a queryset of recipes based on form data.
+
+    Parameters:
+    - form (Form): The form containing filter criteria (title, category, member, ingredients).
+    - logged_user (Member): The currently logged-in user.
+
+    Returns:
+    - QuerySet: A filtered queryset of recipes based on the form data.
+    """
     title = form.cleaned_data.get("title")
     category = form.cleaned_data.get("category")
     member = form.cleaned_data.get("member")
@@ -422,6 +485,19 @@ def get_filtered_recipe_qs(form, logged_user):
     return recipe_qs.order_by("title")
 
 def handle_search_recipe_request(request, logged_user):
+    """
+    Handles a search request for recipes based on form data.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request containing the search query parameters.
+    - logged_user (Member): The currently logged-in user.
+
+    Returns:
+    - tuple: A tuple containing:
+        - form (Form): The validated form with the search data.
+        - QuerySet: A filtered queryset of recipe collection entries if collection is selected, otherwise an empty queryset.
+        - QuerySet: A filtered queryset of recipes if no collection is selected, otherwise an empty queryset.
+    """
     form = SearchRecipeForm(request.GET, logged_user=logged_user)
     
     if form.is_valid():
@@ -435,6 +511,17 @@ def handle_search_recipe_request(request, logged_user):
     return form, RecipeCollectionEntry.objects.none(), Recipe.objects.all().order_by("title")
 
 def handle_show_recipe_collection_request(request):
+    """
+    Handles a request to display a recipe collection based on form data.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request containing the form data for the recipe collection.
+
+    Returns:
+    - tuple: A tuple containing:
+        - form (Form): The validated form with the search data.
+        - QuerySet: A filtered queryset of recipe collection entries based on the form data, or an empty queryset if invalid.
+    """
     form = ShowRecipeCollectionForm(request.POST)
 
     if form.is_valid():
@@ -443,8 +530,18 @@ def handle_show_recipe_collection_request(request):
     return form, RecipeCollectionEntry.objects.none()
 
 def check_request_validity(request):
-    """ 
+    """
+    Validates the incoming request to check for required data and a logged-in user.
 
+    Parameters:
+    - request (HttpRequest): The HTTP request containing the form data.
+
+    Returns:
+    - tuple: A tuple containing:
+        - logged_user (Member or None): The currently logged-in user, or None if not logged in.
+        - recipe_id (str or None): The ID of the recipe from the request, or None if missing.
+        - collection_name (str or None): The name of the collection from the request, or None if missing.
+        - JsonResponse (HttpResponse or None): A JsonResponse with an error message if any validation fails, or None if valid.
     """   
     logged_user = get_logged_user(request)
     if not logged_user:
@@ -465,6 +562,16 @@ def check_request_validity(request):
  
 def update_collection(request, action):
     """
+    Adds or removes a recipe to/from a user's collection based on the action provided.
+
+    Parameters:
+    - request (HttpRequest): The HTTP request containing the user and recipe data.
+    - action (str): The action to perform, either 'add' or 'remove'.
+
+    Returns:
+    - JsonResponse: A JSON response with a success message or error details.
+        - Success message: Indicates whether the recipe was added or removed from the collection.
+        - Error message: Indicates any validation errors or issues during the operation.
     """
     logged_user, recipe_id, collection_name, request_validity_error = check_request_validity(request)
     if request_validity_error:

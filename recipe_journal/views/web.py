@@ -1,24 +1,11 @@
 """
-Module containing all views for the Django application.
-
-Views included:
-    - login: Handles user login and session creation.
-    - logout: Logs out the user by removing their session.
-    - register: Manages user registration and redirects to login upon success.
-    - welcome: Displays the homepage with popular recipes and logged-in user info.
-    - add_recipe: Handles the process of adding a new recipe, validating forms and saving data.
-    - show_confirmation_page: Displays a confirmation page after recipe addition.
-    - show_recipe: Displays a detailed view of a specific recipe.
-    - show_friends: Manages adding a friend to the user's friend list.
-    - show_recipe_collection: Displays a member's recipe collection (album, to-try, history).
-    - search_recipe:
+Module managing the main views of the application, which are accessible through regular web pages.
 """
-
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
-from recipe_journal.forms import LoginForm, AddFriendForm, AddRecipeToCollectionForm, ModifyProfileForm
+from recipe_journal.forms import LoginForm, AddFriendForm, AddRecipeToCollectionsForm, ModifyProfileForm
 from recipe_journal.forms import RecipeCombinedForm, RecipeIngredientForm, RegistrationForm, SearchRecipeForm
 from recipe_journal.models import Member, Recipe, RecipeCollectionEntry
 import recipe_journal.utils.utils as ut
@@ -64,6 +51,8 @@ def register(request):
         return render(request, "register.html", {"form": form})
 
 def modify_profile(request):
+    """Handles the modification of the logged user's profile."""
+
     logged_user = ut.get_logged_user(request)
     if not logged_user:
         return redirect("/login")
@@ -80,7 +69,8 @@ def modify_profile(request):
 
 def welcome(request):
     """
-    Displays the homepage with a list of popular recipes, thumbnails, and logged-in user information if available.
+    Displays the homepage with a list of randomly selected recipes, thumbnails,
+    and logged-in user information if available.
     """
     TOP_RECIPE_NB = 2
     THUMBNAIL_RECIPE_NB = 12
@@ -100,7 +90,7 @@ def welcome(request):
 def add_recipe(request):
     """
     Handles adding a new recipe by validating forms, saving the recipe and ingredients, 
-    and processing associated actions (collections). Redirects to the confirmation page upon success.
+    and adding to the logged-in user recipe collections. Redirects to the confirmation page upon success.
     """
     logged_user = ut.get_logged_user(request)
     if not logged_user:
@@ -109,7 +99,7 @@ def add_recipe(request):
     if request.method != "POST":
         recipe_form = RecipeCombinedForm()
         recipe_ingredient_form_list = [RecipeIngredientForm()]
-        add_recipe_to_collection_form = AddRecipeToCollectionForm()
+        add_recipe_to_collection_form = AddRecipeToCollectionsForm()
 
     if request.method == "POST":
         recipe_form, recipe_ingredient_form_list, add_recipe_to_collection_form = ut.prepare_recipe_forms(request)
@@ -128,9 +118,8 @@ def add_recipe(request):
     return render(request, "add_recipe.html", context)
 
 def show_confirmation_page(request):
-    """
-    Displays the confirmation page after a successful recipe addition.
-    """
+    """Displays the confirmation page after a successful recipe addition."""
+
     logged_user = ut.get_logged_user(request)
     if not logged_user:
         return redirect("/login")
@@ -159,6 +148,7 @@ def show_recipe(request):
 
 def show_friends(request):
     """Displays the logged-in user's friend list and handles adding or removing friends."""
+
     logged_user = ut.get_logged_user(request)
     if not logged_user:
         return redirect("/login")
@@ -181,7 +171,10 @@ def show_friends(request):
     return render(request, "show_friends.html", context)
 
 def search_recipe(request):
-    """"""
+    """
+    Handles the recipe search by processing the search form, retrieving matching recipes, 
+    and displaying them based on the user's collection selection. Returns the search results page.
+    """
     logged_user = ut.get_logged_user(request)
 
     if request.method == "GET":
@@ -206,6 +199,8 @@ def search_recipe(request):
 
 def show_recipe_collection(request):
     """
+    Displays the recipes in a specific collection based on the selected collection and member.
+    Processes the form submission and shows the recipes in the chosen collection.
     """
     logged_user = ut.get_logged_user(request)
     if not logged_user:

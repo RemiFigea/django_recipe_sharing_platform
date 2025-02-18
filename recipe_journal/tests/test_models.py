@@ -1,6 +1,5 @@
-"""
-Unit tests for the models.py module.
-"""
+"""Unit tests for the models module."""
+
 from datetime import date
 from django.contrib.auth.hashers import make_password
 from django.core.files.uploadedfile import SimpleUploadedFile

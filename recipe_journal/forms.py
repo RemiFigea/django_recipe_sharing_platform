@@ -1,36 +1,21 @@
 """
-Module containing the forms for the Django application.
+Module containing various forms used for filtering, displaying, and manipulating recipe data.
 
-Forms included:
-    - LoginForm: Handles user login.
-    - RegistrationForm: Manages user registration.
-    - ModifyProfileForm:
-    - AddMainRecipeForm: Captures main recipe information like title and category.
-    - AddSecondaryRecipeForm: Captures additional recipe details like cooking time and description.
-    - AddRecipeCombinedForm: Combines the main and secondary recipe forms into one submission.
-    - AddRecipeIngredientForm: Adds ingredients to a recipe.
-    - AddFriendForm: Manages adding friends to the user's friend list.
-    - RecipeActionForm: Manages actions related to adding recipes to different collections.
-    - AddRecipeHistoryForm:
-    - RemoveRecipeHistoryForm:
-    - SearchRecipeForm:
-    - FilterRecipeCollectionForm
+Each form in this module serves as a structured input interface for interacting with the application's data models and views.
 """
 from django.contrib.auth.hashers import check_password, make_password
 from django import forms
 from recipe_journal.models import Ingredient, Member, Recipe, RecipeCollectionEntry, RecipeIngredient
 
 class LoginForm(forms.Form):
-    """
-    Form to handle user login by capturing and validating the username and password.
-    """
+    """Form to handle user login by capturing and validating the username and password."""
+
     username = forms.CharField(label="identifiant", required=True)
     password = forms.CharField(label="mot de passe", widget = forms.PasswordInput, required=True)
 
     def clean(self):
-        """
-        Validates that the username and password match an existing user.
-        """
+        """Validates that the username and password match an existing user."""
+
         cleaned_data = super().clean()
         username = cleaned_data.get("username")
         password = cleaned_data.get("password")
@@ -46,9 +31,8 @@ class LoginForm(forms.Form):
         return cleaned_data
 
 class RegistrationForm(forms.ModelForm):
-    """
-    Form to handle user registration, ensuring the provided username is unique.
-    """
+    """Form to handle user registration, ensuring the provided username is unique."""
+
     class Meta:
         model = Member
         fields = ["username", "password"]
@@ -59,9 +43,8 @@ class RegistrationForm(forms.ModelForm):
         widgets = {"password": forms.PasswordInput()}
 
     def clean_username(self):
-        """
-        Ensures the username is unique and not already taken by another user.
-        """
+        """Ensures the username is unique and not already taken by another user."""
+
         username = self.cleaned_data.get("username")
 
         if username:
@@ -70,8 +53,8 @@ class RegistrationForm(forms.ModelForm):
         return username
     
     def save(self, commit=True):
-        """
-        """
+        """Saves the new user after hashing the password."""
+
         member = super().save(commit=False)
         password = self.cleaned_data["password"]
 
@@ -84,6 +67,8 @@ class RegistrationForm(forms.ModelForm):
         return member
     
 class ModifyProfileForm(forms.ModelForm):
+    """Form to modify the user's profile, including username and password update."""
+
     former_password = forms.CharField(
         label="Ancien mot de passe",
         widget=forms.PasswordInput(),
@@ -109,35 +94,49 @@ class ModifyProfileForm(forms.ModelForm):
         edit_only = True
 
     def __init__(self, *args, logged_user=None, **kwargs):
+        """
+        Initializes the form with the logged-in user's information.
+
+        Parameters:
+        - logged_user (Member): The currently logged-in user attempting to modify their profile.
+        """
         self.logged_user = logged_user
         super().__init__(*args, **kwargs)
 
     def clean_username(self):
+        """Validates that the username is either unchanged or unique."""
+
         username = self.cleaned_data.get("username")
+
         if username and username != self.logged_user.username:
             if Member.objects.filter(username=username).exists():
                 raise forms.ValidationError("Identifiant non disponible.")
         return username
 
     def clean_former_password(self):
+        """Validates that the former password matches the stored password."""
+
         former_password = self.cleaned_data.get("former_password")
+
         if not check_password(former_password, self.logged_user.password):
             raise forms.ValidationError("Ancien mot de passe erroné.")
         return former_password
     
     def clean(self):
+        """Validates that the new password and confirmation match."""
+
         cleaned_data = super().clean()
         new_password = cleaned_data.get("new_password")
         confirm_new_password = cleaned_data.get("confirm_new_password")
+
         if new_password != confirm_new_password:
             raise forms.ValidationError("Les nouveaux mots de passe ne correspondent pas.")
-
         return cleaned_data
 
     
     def save(self, commit=True):
-        """
-        """
+        """Saves the modified profile with the new username and password."""
+
         username = self.cleaned_data["username"]
         new_password = self.cleaned_data["new_password"]
 
@@ -154,8 +153,8 @@ class ModifyProfileForm(forms.ModelForm):
 
 class RecipeMainSubForm(forms.ModelForm):
     """
-    Form to add the main details of a recipe, including title, category, source, 
-    URL, and content. Ensures the recipe title is unique to avoid duplication.
+    Form to add the main details of a recipe, including title, category, source,
+    URL, and content.
     """
     class Meta:
         model = Recipe
@@ -182,9 +181,8 @@ class RecipeMainSubForm(forms.ModelForm):
         }
 
     def clean_title(self):
-        """
-        Checks that the recipe title is unique and not already in use.
-        """
+        """Checks that the recipe title is unique and not already in use."""
+
         title = self.cleaned_data.get("title")
 
         if title:
@@ -225,26 +223,31 @@ class RecipeCombinedForm(forms.Form):
     This form allows the submission of both sections in a single form.
     """
     def __init__(self, *args, **kwargs):
+        """Initializes the combined form with main and secondary subforms."""
+
         super().__init__(*args, **kwargs)
         self.main_form = RecipeMainSubForm(*args, **kwargs)
         self.secondary_form = RecipeSecondarySubForm(*args, **kwargs)
 
     def is_valid(self):
+        """Validates both the main and secondary forms."""
+
         main_valid = self.main_form.is_valid()
         secondary_valid = self.secondary_form.is_valid()
 
         return main_valid and secondary_valid
 
     def clean(self):
+        """Cleans and combines the cleaned data from both forms."""
+
         return {
             "main_form": self.main_form.cleaned_data,
             "secondary_form": self.secondary_form.cleaned_data,
         }
 
     def save(self):
-        """
-        Creates and saves a new Recipe object with the main and secondary form data.
-        """
+        """Creates and saves a new Recipe object with the form data."""
+
         title = self.main_form.cleaned_data["title"]
         category = self.main_form.cleaned_data["category"]
         source = self.main_form.cleaned_data["source"]
@@ -269,13 +272,12 @@ class RecipeCombinedForm(forms.Form):
             short_description=short_description
         )
         recipe.save()
+
         return recipe
 
 class RecipeIngredientForm(forms.ModelForm):
-    """
-    Form to add ingredients to a recipe. 
-    Ensures that the ingredient exists in the database or creates it if necessary.
-    """
+    """Form to add ingredients to a recipe."""
+
     name = forms.CharField(
         max_length=100,
         label="nom de l'ingrédient",
@@ -314,11 +316,10 @@ class RecipeIngredientForm(forms.ModelForm):
 
         return instance
     
-class AddRecipeToCollectionForm(forms.Form):
+class AddRecipeToCollectionsForm(forms.Form):
     """
     Form to manage the actions of adding a recipe to various collections 
-    (album, history, to-try list).
-    Ensures that at least one collection is selected by the user.
+    (album, history, trials).
     """
     COLLECTION_NAME_MAPPING = {
         "album": "add_to_album",
@@ -349,9 +350,8 @@ class AddRecipeToCollectionForm(forms.Form):
     )
 
     def clean(self):
-        """
-        Ensures that at least one recipe collection is selected by the user.
-        """
+        """Ensures that at least one recipe collection is selected by the user."""
+
         cleaned_data = super().clean()
         add_to_album = cleaned_data.get("add_to_album")
         add_to_history = cleaned_data.get("add_to_history")
@@ -363,10 +363,8 @@ class AddRecipeToCollectionForm(forms.Form):
         return cleaned_data
     
 class AddFriendForm(forms.Form):
-    """
-    Form for adding a friend to the logged-in user's friend list.
-    Verifies that the user exists and is not already in the friend list.
-    """
+    """Form for adding a friend to the logged-in user's friend list."""
+
     username_to_add = forms.CharField(
         label="Identifiant",
         required=True,
@@ -374,13 +372,18 @@ class AddFriendForm(forms.Form):
     )
 
     def __init__(self, *args, logged_user=None, **kwargs):
+        """
+        Initializes the form with the logged-in user's information.
+
+        Parameters:
+        - logged_user (Member): The currently logged-in user attempting to modify their profile.
+        """
         self.logged_user = logged_user
         super().__init__(*args, **kwargs)
 
     def clean_username_to_add(self):
-        """
-        Validates that the username exists and is not already a friend of the logged-in user.
-        """
+        """Validates that the username exists and is not already a friend of the logged-in user."""
+
         cleaned_data = super().clean()
         username_to_add = cleaned_data.get("username_to_add")
 
@@ -395,23 +398,29 @@ class AddFriendForm(forms.Form):
         return username_to_add
 
 class CreateRecipeHistoryForm(forms.ModelForm):
+    """Form to create a new recipe collection entry in the user's history collection."""
+
     class Meta:
         model = RecipeCollectionEntry
         fields = ["collection_name", "member", "recipe", "saving_date", "personal_note"]
     
     def __init__(self, *args, **kwargs):
+        """Initializes the form and sets 'history' as the default collection name."""
+
         super().__init__(*args, **kwargs)
         self.fields["collection_name"].initial = "history"
         self.fields["collection_name"].widget = forms.HiddenInput()
         self.fields["collection_name"].required = False
 
     def clean(self):
+        """
+        Validates that the recipe isn't already part of the user's history for the given date.
+        """
         cleaned_data = super().clean()
         cleaned_data["collection_name"] = "history"
         saving_date = cleaned_data.get("saving_date")
         member = cleaned_data.get("member")
         recipe = cleaned_data.get("recipe")
-
 
         if RecipeCollectionEntry.objects.filter(
             collection_name="history",
@@ -424,7 +433,18 @@ class CreateRecipeHistoryForm(forms.ModelForm):
         return cleaned_data
 
 class DeleteRecipeHistoryForm(forms.Form):
+    """
+    Form to delete a recipe entry from the user's history by selecting a specific date.
+    """
+
     def __init__(self, *args, member=None, recipe=None, **kwargs):
+        """
+        Initializes the form and populates the date choices for the given member and recipe.
+
+        Parameters:
+        - member (Member, optional): The logged-in user or member whose history is being modified.
+        - recipe (Recipe, optional): The recipe for which the history entry is being modified.
+        """
         super().__init__(*args, **kwargs)
         self.member = member
         self.recipe = recipe
@@ -442,6 +462,10 @@ class DeleteRecipeHistoryForm(forms.Form):
         )
 
 class BaseFilterRecipeForm(forms.Form):
+    """
+    Base form class for filtering recipes based on various optional criteria, 
+    including title, category, and ingredients.
+    """
     title = forms.CharField(label="titre de la recette:", required=False)
     category = forms.ChoiceField(
         label="type de plat:",
@@ -453,6 +477,15 @@ class BaseFilterRecipeForm(forms.Form):
     ingredient_3 = forms.CharField(label="ingredient 3:", required=False)
 
 class SearchRecipeForm(BaseFilterRecipeForm):
+    """
+    Form for filtering recipes based on their collection name and various optional criteria such as title, 
+    category, and ingredients.
+    
+    In addition to the optional criteria in the base form, this form allows filtering by:
+    - "collection_name": The collection to filter recipes by, excluding the 'trials' collection.
+    - "member": An optional field to filter by logged-in user's friends.
+    """
+
     FORM_COLLECTION_CHOICES = [("", "toutes")] + [
         (key, value) for key, value in RecipeCollectionEntry.MODEL_COLLECTION_CHOICES if key != "trials"
     ]
@@ -464,6 +497,15 @@ class SearchRecipeForm(BaseFilterRecipeForm):
     collection_name = forms.ChoiceField(label="collection:", choices=FORM_COLLECTION_CHOICES, required=False)
 
     def __init__(self, *args, logged_user=None, **kwargs):
+        """
+        Initializes the form with options to filter recipes based on various criteria.
+
+        Parameters:
+        - logged_user (Member, optional): The currently logged-in user who may have specific filtering options, like friends.
+
+        Updates the form fields based on the provided logged_user:
+        - If logged_user is provided, adds a 'member' field to the form, allowing filtering by members (e.g., friends).
+        """
         self.logged_user = logged_user
         super().__init__(*args, **kwargs)
         
@@ -471,6 +513,13 @@ class SearchRecipeForm(BaseFilterRecipeForm):
             self.fields["member"] = forms.ChoiceField(label="membres:", choices=self.MEMBER_CHOICES, required=False)
 
 class ShowRecipeCollectionForm(BaseFilterRecipeForm):
+    """
+    Form to filter and display a recipe collection based on its name and a specified member.
+
+    In addition to the optional criteria in the base form, this form allows filtering by:
+    - "collection_name": The collection to display.
+    - "member": A member whose collection is being viewed.
+    """
     collection_name = forms.ChoiceField(
         label="collection:",
         choices=RecipeCollectionEntry.MODEL_COLLECTION_CHOICES,

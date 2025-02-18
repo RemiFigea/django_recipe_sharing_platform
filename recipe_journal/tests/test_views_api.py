@@ -1,6 +1,5 @@
-"""
-Unit tests for the api.py module.
-"""
+"""Unit tests for the views contained in the api module."""
+
 from datetime import date
 from django.http import HttpResponse, JsonResponse
 from django.test import TestCase

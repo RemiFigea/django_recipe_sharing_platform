@@ -1,4 +1,8 @@
+"""Module defining paths for mocked functions in unit tests."""
+
 class MockFunctionPathManager():
+    """Centralizes paths for mocked functions used in tests."""
+
     ADD_RECIPE_TO_COLLECTIONS = "add_recipe_to_collections"
     ARE_FORMS_VALID = "are_forms_valid"
     CHECK_REQUEST_VALIDITY = "check_request_validity"

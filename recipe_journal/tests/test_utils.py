@@ -1,6 +1,5 @@
-"""
-Unit tests for the utils.py module.
-"""
+"""Unit tests for the utils module."""
+
 from datetime import date, timedelta
 from django.contrib.auth.hashers import make_password
 from django.contrib.messages import get_messages
@@ -9,7 +8,7 @@ from django.db import transaction
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 import json
-from recipe_journal.forms import  AddRecipeToCollectionForm, RecipeCombinedForm, ShowRecipeCollectionForm
+from recipe_journal.forms import  AddRecipeToCollectionsForm, RecipeCombinedForm, ShowRecipeCollectionForm
 from recipe_journal.forms import RecipeIngredientForm, SearchRecipeForm
 from recipe_journal.models import Ingredient, Member, Recipe, RecipeIngredient
 from recipe_journal.tests.test_config.mock_function_paths import MockFunctionPathManager
@@ -236,7 +235,7 @@ class InitializeFormTest(TestCase):
     
     def test_initialize_form_valid_data(self):
         request = self.factory.post("/", {"add_to_album": True})
-        form = initialize_form(AddRecipeToCollectionForm, request)
+        form = initialize_form(AddRecipeToCollectionsForm, request)
 
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["add_to_album"], True)
@@ -304,10 +303,10 @@ class CreateRecipeCollectionEntryTest(TestCase):
         self.recipe = Recipe.objects.create(title="recette test", category="plat")
 
     def _test_create_recipe_collection_entry(self, add_recipe_to_collection_form_data):
-        add_recipe_to_collection_form = AddRecipeToCollectionForm(add_recipe_to_collection_form_data)
+        add_recipe_to_collection_form = AddRecipeToCollectionsForm(add_recipe_to_collection_form_data)
         add_recipe_to_collection_form.is_valid()
         
-        for collection_name in AddRecipeToCollectionForm.COLLECTION_NAME_MAPPING:
+        for collection_name in AddRecipeToCollectionsForm.COLLECTION_NAME_MAPPING:
             added = create_recipe_collection_entry(
                         add_recipe_to_collection_form,
                         collection_name,

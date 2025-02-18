@@ -60,9 +60,11 @@ Key views in the **views_api** module include:
 The repository is structured as follows:
 ```
 /django_recipe_sharing_platform
+    /media                          # Directory for storing media files (e.g., recipe images) related to the database
+        /recipe_images              # Subfolder specifically for storing images of recipes uploaded by users
     /recipe_journal
         /tests
-            /media                  # Images used during tests
+            /test_media             # Directory for storing media files (e.g., recipe images) used during tests
                 /temp               # Temporary image storage for testing image-saving functionality
                 - image_test.jpg    # Example image used in some test cases
             /test_config            # Configuration files for testing

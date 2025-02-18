@@ -4,7 +4,6 @@ Unit tests for the forms.py module.
 from datetime import date, timedelta
 from django.contrib.auth.hashers import make_password
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import transaction
 from django.test import TestCase
 from recipe_journal.forms import *
 from recipe_journal.models import Ingredient, Member, Recipe, RecipeIngredient
@@ -178,7 +177,7 @@ class AddRecipeCombinedFormTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir="recipe_journal/tests/media/temp")
+        cls.TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir="recipe_journal/tests/test_media/temp")
 
     @classmethod
     def tearDownClass(cls):
@@ -187,7 +186,7 @@ class AddRecipeCombinedFormTest(TestCase):
 
     def test_form_with_valid_recipe_data(self):
         with patch("django.conf.settings.MEDIA_ROOT", new=self.TEMP_MEDIA_ROOT):
-            with open("recipe_journal/tests/media/image_test.jpg", "rb") as img_file:
+            with open("recipe_journal/tests/test_media/image_test.jpg", "rb") as img_file:
                 image = SimpleUploadedFile(
                     name="image_test.jpg",
                     content=img_file.read(),

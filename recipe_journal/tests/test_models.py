@@ -23,7 +23,7 @@ class RecipeModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir="recipe_journal/tests/media/temp")
+        cls.TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir="recipe_journal/tests/test_media/temp")
 
     @classmethod
     def tearDownClass(cls):
@@ -39,7 +39,7 @@ class RecipeModelTest(TestCase):
     
     def test_model_image_is_compressed_only_once(self):
         with patch("django.conf.settings.MEDIA_ROOT", new=self.TEMP_MEDIA_ROOT):
-            with open("recipe_journal/tests/media/image_test.jpg", "rb") as img_file:
+            with open("recipe_journal/tests/test_media/image_test.jpg", "rb") as img_file:
                 image = SimpleUploadedFile(
                     name="image_test.jpg",
                     content=img_file.read(),

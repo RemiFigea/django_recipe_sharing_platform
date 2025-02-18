@@ -13,5 +13,5 @@ __pycache__/
 # Ignore database files, media folder
 */*.sqlite3
 *.sqlite3
-*/media/
-media/
+*/test_media/temp/*
+media/recipe_images/*

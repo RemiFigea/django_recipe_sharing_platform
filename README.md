@@ -129,7 +129,7 @@ The repository is structured as follows:
 ## Installation and Setup
 1. Clone the repository:
 ```
-git clone https://github.com/yourusername/django_recipe_sharing_platform.git
+git clone https://github.com/RemiFigea/django_recipe_sharing_platform.git
 ```
 
 2. Navigate into the project directory:

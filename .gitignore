@@ -10,7 +10,5 @@ __pycache__/
 # Ignore les fichiers static créés pour le déploiement
 /staticfiles/
 
-# Ignore database files, media folder
+# Ignore database files
 *.sqlite3
-media/recipe_images/*
-*/test_media/temp/*
